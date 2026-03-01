@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>CHARI RUN</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;touch-action:none;}
+  body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden;}
+  #hud{display:flex;justify-content:space-between;align-items:center;width:360px;margin-bottom:5px;padding:0 4px;}
+  #lives{color:#ff4466;font-size:13px;}
+  #score-display{color:#ffdd00;font-size:9px;font-family:monospace;font-weight:bold;}
+  #canvas{border:3px solid #555;border-radius:3px;box-shadow:0 0 24px #ffdd0033;cursor:pointer;display:block;}
+  #powerups{width:360px;height:16px;margin-top:4px;padding:0 4px;font-family:monospace;font-size:9px;display:flex;gap:10px;}
+  #msg{margin-top:7px;color:#FFD700;font-size:11px;text-align:center;font-family:monospace;animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0}}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span id="lives">❤️❤️❤️</span>
+  <span id="score-display">DIST: 0m</span>
+</div>
+<canvas id="canvas" width="360" height="480"></canvas>
+<div id="powerups"></div>
+<div id="msg">タップ / スペース でジャンプ！</div>
+
+<script>
+// ==============================
+// AUDIO
+// ==============================
+var _AC=null;
+function ac(){if(!_AC)_AC=new(window.AudioContext||window.webkitAudioContext)();return _AC;}
+function tone(f,type,dur,vol,t0){
+  vol=vol||0.1;t0=t0||0;
+  try{var a=ac(),o=a.createOscillator(),g=a.createGain();
+  o.connect(g);g.connect(a.destination);o.type=type;o.frequency.value=f;
+  var s=a.currentTime+t0;g.gain.setValueAtTime(vol,s);
+  g.gain.exponentialRampToValueAtTime(0.001,s+dur);o.start(s);o.stop(s+dur+0.05);}catch(e){}
+}
+function kick(t0,f,d){f=f||150;d=d||0.12;
+  try{var a=ac(),o=a.createOscillator(),g=a.createGain();
+  o.connect(g);g.connect(a.destination);o.type='sine';var s=a.currentTime+t0;
+  o.frequency.setValueAtTime(f,s);o.frequency.exponentialRampToValueAtTime(28,s+d);
+  g.gain.setValueAtTime(0.28,s);g.gain.exponentialRampToValueAtTime(0.001,s+d+0.04);
+  o.start(s);o.stop(s+d+0.08);}catch(e){}
+}
+function hat(t0,vol){vol=vol||0.03;
+  try{var a=ac(),buf=a.createBuffer(1,Math.floor(a.sampleRate*0.03),a.sampleRate);
+  var d=buf.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+  var src=a.createBufferSource(),g=a.createGain(),flt=a.createBiquadFilter();
+  flt.type='highpass';flt.frequency.value=8000;src.buffer=buf;src.connect(flt);flt.connect(g);g.connect(a.destination);
+  g.gain.setValueAtTime(vol,a.currentTime+t0);src.start(a.currentTime+t0);}catch(e){}
+}
+var seJump =function(){tone(300,'square',0.1,0.14);tone(450,'square',0.07,0.1,0.1);};
+var seJump2=function(){tone(400,'square',0.1,0.13);tone(600,'square',0.07,0.1,0.1);};
+var seJump3=function(){tone(540,'square',0.1,0.14);tone(810,'square',0.07,0.11,0.1);};
+var seDmg  =function(){[150,110,80].forEach(function(f,i){tone(f,'sawtooth',0.08,0.2,i*0.06);});};
+var seFall =function(){[220,140,80,40].forEach(function(f,i){tone(f,'sawtooth',0.1,0.22,i*0.07);});};
+var seLife =function(){[523,659,784,1047].forEach(function(f,i){tone(f,'square',0.1,0.14,i*0.09);});};
+var seInv  =function(){[440,660,880,660,440].forEach(function(f,i){tone(f,'square',0.06,0.12,i*0.06);});};
+var seTriple=function(){[400,600,800,1050].forEach(function(f,i){tone(f,'square',0.09,0.13,i*0.07);});};
+var seLvUp =function(){[330,440,550,660,770,880].forEach(function(f,i){tone(f,'square',0.12,0.14,i*0.07);});};
+
+var bgmLevel=-1,bgmTimer=null;
+var BGM=[
+  {mel:[[330,0.25],[0,0.05],[370,0.15],[0,0.05],[415,0.2],[0,0.05],[370,0.15],[330,0.2],[0,0.1],[294,0.2],[0,0.05],[330,0.15],[0,0.05],[370,0.25],[0,0.1],[330,0.35],[0,0.15],[370,0.2],[0,0.05],[415,0.15],[0,0.05],[494,0.2],[0,0.05],[466,0.15],[415,0.2],[0,0.1],[370,0.2],[0,0.05],[415,0.15],[0,0.05],[494,0.3],[0,0.1],[466,0.4],[0,0.2]],bas:[[110,0.3],[0,0.1],[138,0.3],[0,0.1],[123,0.3],[0,0.1],[110,0.3],[0,0.1]],mt:'triangle',mv:0.065,bt:'sine',bv:0.08,ki:0,ha:0},
+  {mel:[[440,0.12],[0,0.06],[494,0.12],[0,0.06],[554,0.18],[0,0.06],[523,0.12],[494,0.12],[0,0.12],[440,0.12],[0,0.06],[415,0.12],[0,0.06],[440,0.24],[0,0.12],[494,0.12],[0,0.06],[554,0.12],[0,0.06],[622,0.18],[0,0.06],[587,0.12],[554,0.12],[0,0.12],[523,0.12],[0,0.06],[494,0.12],[0,0.06],[523,0.3],[0,0.15],[370,0.12],[0,0.06],[415,0.12],[0,0.06],[466,0.18],[0,0.06],[440,0.12],[415,0.12],[0,0.12],[370,0.12],[0,0.06],[349,0.12],[0,0.06],[370,0.24],[0,0.12],[415,0.12],[0,0.06],[466,0.12],[0,0.06],[523,0.18],[0,0.06],[494,0.12],[466,0.12],[0,0.12],[440,0.12],[0,0.06],[415,0.12],[0,0.06],[440,0.35],[0,0.15]],bas:[[110,0.18],[0,0.06],[110,0.12],[0,0.06],[138,0.18],[0,0.06],[110,0.12],[0,0.06],[98,0.18],[0,0.06],[98,0.12],[0,0.06],[123,0.18],[0,0.06],[98,0.12],[0,0.06]],mt:'square',mv:0.06,bt:'triangle',bv:0.075,ki:0.5,ha:0.25},
+  {mel:[[330,0.1],[330,0.1],[0,0.05],[330,0.1],[0,0.05],[277,0.1],[330,0.15],[0,0.05],[392,0.2],[0,0.1],[370,0.2],[0,0.2],[349,0.1],[349,0.1],[0,0.05],[349,0.1],[0,0.05],[311,0.1],[349,0.15],[0,0.05],[415,0.2],[0,0.1],[392,0.2],[0,0.2],[294,0.1],[294,0.1],[0,0.05],[294,0.1],[0,0.05],[262,0.1],[294,0.15],[0,0.05],[370,0.15],[440,0.15],[0,0.1],[415,0.2],[0,0.1],[277,0.1],[277,0.1],[0,0.05],[277,0.1],[0,0.05],[247,0.1],[277,0.15],[0,0.05],[330,0.2],[0,0.1],[311,0.3],[0,0.15]],bas:[[82,0.15],[0,0.05],[82,0.1],[82,0.1],[0,0.1],[92,0.15],[0,0.05],[82,0.1],[0,0.1],[73,0.15],[0,0.05],[73,0.1],[73,0.1],[0,0.1],[82,0.15],[0,0.05],[73,0.1],[0,0.1]],mt:'sawtooth',mv:0.058,bt:'sawtooth',bv:0.07,ki:0.4,ha:0.2},
+  {mel:[[622,0.1],[0,0.05],[587,0.1],[0,0.05],[554,0.1],[0,0.05],[523,0.1],[0,0.05],[494,0.15],[0,0.05],[523,0.1],[0,0.05],[554,0.2],[0,0.1],[587,0.1],[0,0.05],[622,0.1],[0,0.05],[659,0.15],[0,0.05],[698,0.1],[0,0.05],[740,0.2],[0,0.1],[698,0.1],[0,0.05],[659,0.25],[0,0.1],[622,0.1],[0,0.05],[659,0.1],[0,0.05],[622,0.1],[0,0.05],[587,0.1],[0,0.05],[554,0.15],[0,0.05],[523,0.1],[0,0.05],[494,0.2],[0,0.1],[466,0.1],[0,0.05],[494,0.1],[0,0.05],[523,0.1],[0,0.05],[554,0.1],[0,0.05],[587,0.15],[0,0.05],[622,0.1],[0,0.05],[659,0.3],[0,0.15]],bas:[[138,0.1],[0,0.05],[138,0.1],[0,0.05],[165,0.1],[0,0.05],[138,0.1],[0,0.05],[123,0.1],[0,0.05],[123,0.1],[0,0.05],[138,0.1],[0,0.05],[110,0.1],[0,0.05]],mt:'square',mv:0.065,bt:'sawtooth',bv:0.085,ki:0.25,ha:0.125},
+  {mel:[[880,0.08],[0,0.04],[831,0.08],[784,0.08],[0,0.04],[740,0.08],[0,0.04],[698,0.1],[0,0.06],[784,0.08],[0,0.04],[880,0.08],[0,0.04],[988,0.1],[0,0.04],[880,0.08],[0,0.06],[831,0.08],[0,0.04],[740,0.08],[698,0.08],[0,0.04],[659,0.08],[0,0.04],[622,0.1],[0,0.06],[698,0.08],[0,0.04],[784,0.08],[0,0.04],[880,0.1],[0,0.04],[831,0.1],[0,0.1],[988,0.08],[0,0.04],[880,0.08],[831,0.08],[0,0.04],[784,0.08],[0,0.04],[740,0.1],[0,0.06],[698,0.08],[0,0.04],[740,0.08],[0,0.04],[784,0.08],[0,0.04],[831,0.08],[0,0.06],[880,0.08],[0,0.04],[831,0.08],[784,0.08],[0,0.04],[698,0.08],[0,0.04],[659,0.1],[0,0.06],[622,0.08],[0,0.04],[659,0.08],[0,0.04],[698,0.08],[0,0.04],[784,0.28],[0,0.12]],bas:[[110,0.08],[0,0.04],[110,0.08],[0,0.04],[138,0.08],[0,0.04],[110,0.08],[0,0.04],[98,0.08],[0,0.04],[98,0.08],[0,0.04],[110,0.08],[0,0.04],[92,0.08],[0,0.04]],mt:'sawtooth',mv:0.062,bt:'sawtooth',bv:0.095,ki:0.2,ha:0.1},
+];
+function playBGM(lv){
+  if(bgmLevel===lv)return;bgmLevel=lv;
+  if(bgmTimer){clearTimeout(bgmTimer);bgmTimer=null;}
+  var D=BGM[lv],a=ac();
+  var mL=D.mel.reduce(function(s,n){return s+n[1];},0);
+  var bL=D.bas.reduce(function(s,n){return s+n[1];},0);
+  function loop(st){
+    if(bgmLevel!==lv)return;
+    var t=st;
+    D.mel.forEach(function(n){if(n[0]>0)tone(n[0],D.mt,n[1]*0.78,D.mv,t-a.currentTime);t+=n[1];});
+    t=st;var rp=Math.ceil(mL/bL);
+    for(var r=0;r<rp;r++)D.bas.forEach(function(n){if(n[0]>0)tone(n[0],D.bt,n[1]*0.72,D.bv,t-a.currentTime);t+=n[1];});
+    if(D.ki>0)for(var k=0;k<=Math.floor(mL/D.ki);k++)kick(st+k*D.ki-a.currentTime);
+    if(D.ha>0)for(var h=0;h<=Math.floor(mL/D.ha);h++)hat(st+h*D.ha-a.currentTime);
+    bgmTimer=setTimeout(function(){loop(a.currentTime+0.1);},(mL-0.5)*1000);
+  }
+  loop(a.currentTime+0.1);
+}
+
+// ==============================
+// THEMES
+// ==============================
+var THEMES=[
+  {name:'MORNING',skyT:'#87CEEB',skyB:'#c8e8ff',gndFill:'#228B22',gndEdge:'#33aa33',roadCol:'#c8a96e',accent:'#FFD700',starCol:'#fff9c4',sunCol:'#FFD700',cloudCol:'rgba(255,255,255,0.88)'},
+  {name:'SUNSET', skyT:'#FF6B35',skyB:'#ffb347',gndFill:'#8B4513',gndEdge:'#cd853f',roadCol:'#7a5230',accent:'#FFD700',starCol:'#ffcc88',sunCol:'#FF4500',cloudCol:'rgba(255,160,80,0.75)'},
+  {name:'NIGHT',  skyT:'#0a0a2e',skyB:'#0d0d44',gndFill:'#1a1a3e',gndEdge:'#00ffaa',roadCol:'#1a1a35',accent:'#00ffaa',starCol:'#ffffff',sunCol:'#ffffaa',cloudCol:'rgba(80,80,160,0.55)'},
+  {name:'STORM',  skyT:'#111122',skyB:'#222233',gndFill:'#1e1e2e',gndEdge:'#7777ff',roadCol:'#1a1a28',accent:'#7777ff',starCol:'#aaaaff',sunCol:'#5555bb',cloudCol:'rgba(60,60,100,0.8)'},
+  {name:'LAVA',   skyT:'#1a0000',skyB:'#2a0400',gndFill:'#1a0500',gndEdge:'#ff3300',roadCol:'#140300',accent:'#ff3300',starCol:'#ff5500',sunCol:'#ff1100',cloudCol:'rgba(160,40,0,0.65)'},
+];
+
+// ==============================
+// GAME CORE
+// ==============================
+var canvas=document.getElementById('canvas');
+var ctx=canvas.getContext('2d');
+var W=canvas.width,H=canvas.height;
+
+var state='title',dist=0,hiDist=0,frame=0,lastLevel=-1;
+var gameSpeed=3.5;
+var lives=3,invincible=0,tripleTimer=0,levelUpTimer=0;
+var particles=[];
+
+// ---- カメラオフセット（Y方向のみ） ----
+var camY=0; // 画面のYオフセット（正＝上方向にシフト）
+var targetCamY=0;
+
+// ---- プレイヤー ----
+var P={
+  x:80,         // 画面上の固定X
+  worldX:80,    // ワールドX（進行距離管理用）
+  y:300,        // ワールドY
+  vy:0,vx:0,
+  w:28,h:28,
+  onGround:false,
+  jumpsLeft:2,
+  angle:0,      // 傾き
+  get maxJumps(){return tripleTimer>0?3:2;}
+};
+
+// ---- 地形ポイント列（連続した折れ線） ----
+// points: [{x, y}] ワールド座標
+// 地形は折れ線で表現。x方向に連続
+var terrainPts=[];   // ワールド座標の地形頂点
+var terrainGenX=0;
+
+// 障害物・アイテム
+var obstacles=[];
+var items=[];
+
+// 背景オブジェクト
+var bgObjs=[];
+var bgGenX=0;
+
+// 星
+var stars=[];
+for(var _si=0;_si<70;_si++)stars.push({x:Math.random()*W,y:20+Math.random()*(H*0.6),r:Math.random()*1.5+0.3,tw:Math.random()*Math.PI*2});
+
+function getLevel(){
+  if(dist>=2000)return 4;
+  if(dist>=1000)return 3;
+  if(dist>=500)return 2;
+  if(dist>=200)return 1;
+  return 0;
+}
+
+// ---- 地形生成 ----
+// 地形は頂点列。各セグメントは (x0,y0)→(x1,y1) の直線
+// yは0=画面中央ライン基準（H/2+100あたりが通常地面）
+var BASE_Y=H-100; // 通常地面のワールドY
+
+function genTerrain(){
+  var lv=getLevel();
+  var lastPt=terrainPts[terrainPts.length-1]||{x:0,y:BASE_Y};
+
+  // セグメント種類をランダム選択
+  var r=Math.random();
+  var segs=[];
+
+  // セグメントパラメータ（レベルで変化）
+  var slopeMax=[0.18,0.28,0.38,0.48,0.55][lv];    // 最大傾斜
+  var holeProb=[0.08,0.15,0.22,0.28,0.35][lv];    // 穴の確率
+  var bigSlopeProb=[0.1,0.2,0.3,0.35,0.4][lv];    // 急坂の確率
+
+  if(r<holeProb){
+    // 穴：急降下→崖→急上昇
+    var holeW=50+Math.random()*40+lv*8;
+    var depth=120+Math.random()*80;
+    // 穴の前フラット
+    segs.push({dx:30+Math.random()*20,dy:0});
+    // 落下
+    segs.push({dx:8,dy:depth});
+    // 穴底フラット（短い）
+    segs.push({dx:holeW,dy:0,isHole:true});
+    // 上昇
+    segs.push({dx:8,dy:-depth});
+    // 着地後フラット
+    segs.push({dx:40+Math.random()*30,dy:0});
+  }else if(r<holeProb+bigSlopeProb){
+    // 急な上り坂→頂上フラット→急な下り坂
+    var upH=40+Math.random()*60+lv*15;
+    var upW=60+Math.random()*50;
+    segs.push({dx:upW,dy:-upH});
+    segs.push({dx:40+Math.random()*40,dy:0});
+    segs.push({dx:upW,dy:upH});
+  }else if(r<holeProb+bigSlopeProb+0.25){
+    // なだらかな丘
+    var hillH=20+Math.random()*35;
+    var hillW=80+Math.random()*60;
+    segs.push({dx:hillW/2,dy:-hillH});
+    segs.push({dx:20,dy:0});
+    segs.push({dx:hillW/2,dy:hillH});
+  }else if(r<holeProb+bigSlopeProb+0.45){
+    // 下り坂
+    var downH=25+Math.random()*40;
+    var downW=70+Math.random()*50;
+    segs.push({dx:downW,dy:downH});
+    segs.push({dx:50+Math.random()*40,dy:0});
+    segs.push({dx:downW*0.7,dy:-downH});
+  }else{
+    // フラット
+    segs.push({dx:80+Math.random()*70,dy:0});
+  }
+
+  // Y値が画面外に出ないようにクランプ
+  var cur=lastPt;
+  segs.forEach(function(seg){
+    var nx=cur.x+seg.dx;
+    var ny=cur.y+seg.dy;
+    // クランプ（地面が高すぎ・低すぎにならないよう）
+    ny=Math.max(H-260,Math.min(H-50,ny));
+    terrainPts.push({x:nx,y:ny,isHole:!!seg.isHole});
+    cur={x:nx,y:ny};
+    terrainGenX=nx;
+
+    // 障害物（穴でない坂や平地に配置）
+    if(!seg.isHole&&Math.random()<0.22+lv*0.04){
+      var ox=cur.x-seg.dx*0.5;
+      var oy=ny;
+      obstacles.push({x:ox,y:oy,w:20,h:22,type:Math.random()<0.5?'block':'spike',alive:true});
+    }
+    // アイテム
+    if(!seg.isHole&&Math.random()<0.15){
+      var types=['life','life','triple','invincible'];
+      items.push({x:cur.x-seg.dx*0.5,y:ny-55,type:types[Math.floor(Math.random()*types.length)],alive:true,tw:0});
+    }
+  });
+}
+
+function genBgObj(){
+  var lv=getLevel();
+  var th=THEMES[lv];
+  var r=Math.random();
+  var obj={x:bgGenX+Math.random()*60,alive:true};
+  if(r<0.4){obj.type='cloud';obj.y=30+Math.random()*80;obj.w=60+Math.random()*70;obj.h=22+Math.random()*18;obj.col=th.cloudCol;}
+  else if(r<0.72){obj.type='hill';obj.baseY=BASE_Y+20;obj.r=55+Math.random()*55;obj.col=th.gndFill+'cc';}
+  else{obj.type='tree';obj.baseY=0;obj.h=38+Math.random()*28;obj.col=lv>=3?'#222244':'#228B22';}
+  bgObjs.push(obj);
+  bgGenX+=60+Math.random()*80;
+}
+
+function initGame(){
+  terrainPts=[];obstacles=[];items=[];bgObjs=[];particles=[];
+  terrainGenX=0;bgGenX=0;
+
+  // 最初は広い安全な平地
+  terrainPts.push({x:0,y:BASE_Y});
+  terrainPts.push({x:400,y:BASE_Y});
+  terrainGenX=400;
+
+  // 追加生成
+  while(terrainGenX<W+600)genTerrain();
+  while(bgGenX<W+300)genBgObj();
+
+  // プレイヤー初期位置
+  P.x=80;P.worldX=80;P.y=BASE_Y;P.vy=0;P.vx=0;
+  P.onGround=true;P.jumpsLeft=2;P.angle=0;
+  camY=0;targetCamY=0;
+  dist=0;frame=0;gameSpeed=3.5;
+  lives=3;invincible=0;tripleTimer=0;lastLevel=-1;levelUpTimer=0;
+  bgmLevel=-1;state='play';
+  updateHUD();
+  playBGM(0);
+}
+
+// ---- 地形ユーティリティ ----
+// ワールドX座標でのY値を取得
+function getTerrainY(wx){
+  for(var i=0;i<terrainPts.length-1;i++){
+    var a=terrainPts[i],b=terrainPts[i+1];
+    if(wx>=a.x&&wx<=b.x){
+      var t=(wx-a.x)/(b.x-a.x);
+      return a.y+(b.y-a.y)*t;
+    }
+  }
+  return BASE_Y;
+}
+
+// 穴かどうか
+function isOnHole(wx){
+  for(var i=0;i<terrainPts.length-1;i++){
+    var a=terrainPts[i],b=terrainPts[i+1];
+    if(wx>=a.x&&wx<=b.x&&(a.isHole||b.isHole))return true;
+  }
+  return false;
+}
+
+// 地形の傾き取得（ラジアン）
+function getTerrainAngle(wx){
+  for(var i=0;i<terrainPts.length-1;i++){
+    var a=terrainPts[i],b=terrainPts[i+1];
+    if(wx>=a.x&&wx<=b.x){
+      return Math.atan2(b.y-a.y,b.x-a.x);
+    }
+  }
+  return 0;
+}
+
+// ---- PARTICLES ----
+function burst(x,y,col,n){
+  n=n||8;
+  for(var i=0;i<n;i++)particles.push({x:x,y:y,vx:(Math.random()-0.5)*6,vy:(Math.random()-1.2)*5,life:22,maxLife:22,size:Math.random()*4+2,color:col});
+}
+
+// ==============================
+// UPDATE
+// ==============================
+function update(){
+  frame++;
+  if(state!=='play')return;
+
+  var lv=getLevel();
+  if(lv!==lastLevel&&lastLevel>=0){levelUpTimer=90;seLvUp();try{playBGM(lv);}catch(e){}}
+  if(lastLevel<0||lv!==lastLevel)lastLevel=lv;
+
+  // スピード上昇
+  gameSpeed=3.5+dist*0.0015;
+  if(gameSpeed>9.5)gameSpeed=9.5;
+
+  // プレイヤーのワールドX前進
+  P.worldX+=gameSpeed;
+  dist=P.worldX/60;
+
+  // 重力
+  P.vy+=0.55;
+  P.y+=P.vy;
+
+  // 地形Y取得
+  var groundY=getTerrainY(P.worldX);
+  var hole=isOnHole(P.worldX);
+
+  // 落下チェック
+  if(P.y>H+80||hole&&P.y>groundY+40){
+    seFall();
+    state='gameover';
+    if(dist>hiDist)hiDist=dist;
+    return;
+  }
+
+  // 着地
+  if(!hole&&P.y>=groundY){
+    P.y=groundY;P.vy=0;P.onGround=true;P.jumpsLeft=P.maxJumps;
+  }else{
+    if(P.y<groundY)P.onGround=false;
+  }
+
+  // 自転車の傾き
+  var targetAngle=getTerrainAngle(P.worldX);
+  P.angle+=(targetAngle-P.angle)*0.25;
+
+  // カメラY：プレイヤーが画面中央より上下にいたら追従
+  var screenPlayerY=P.y-camY;
+  var idealY=H*0.55;
+  targetCamY=P.y-idealY;
+  // クランプ（あまり上方向には動かさない）
+  if(targetCamY<-60)targetCamY=-60;
+  camY+=(targetCamY-camY)*0.08;
+
+  // タイマー
+  if(invincible>0)invincible--;
+  if(tripleTimer>0){tripleTimer--;if(tripleTimer===0&&P.jumpsLeft>2)P.jumpsLeft=2;}
+
+  // 地形・障害物・アイテムをスクロール
+  // （ワールド座標はそのまま、描画時にオフセット計算）
+  var scrollX=P.worldX-P.x; // 画面左端のワールドX
+
+  // 追加生成
+  if(terrainGenX-scrollX<W+300)genTerrain();
+  if(bgGenX-scrollX<W+200)genBgObj();
+
+  // 古い地形を削除
+  while(terrainPts.length>2&&terrainPts[1].x<scrollX-100)terrainPts.shift();
+  obstacles=obstacles.filter(function(o){return o.x-scrollX>-50;});
+  items=items.filter(function(i){return i.x-scrollX>-50;});
+  bgObjs=bgObjs.filter(function(o){return o.x-scrollX*0.4>-200;});
+
+  // 障害物当たり判定
+  if(invincible===0){
+    var sx=scrollX;
+    obstacles.forEach(function(o){
+      if(!o.alive)return;
+      var ox=o.x-sx; // スクリーンX
+      var oy=o.y-camY; // スクリーンY
+      // プレイヤースクリーン座標
+      var psx=P.x,psy=P.y-camY;
+      if(psx+P.w/2>ox&&psx-P.w/2<ox+o.w&&psy>oy&&psy-P.h<oy+o.h){
+        lives--;seDmg();invincible=150;
+        burst(psx,psy-P.h/2,'#ff4466',10);updateHUD();
+        if(lives<=0){state='gameover';if(dist>hiDist)hiDist=dist;}
+      }
+    });
+  }
+
+  // アイテム取得
+  var sx2=scrollX;
+  items.forEach(function(item){
+    if(!item.alive)return;
+    item.tw=(item.tw||0)+0.07;
+    var isx=item.x-sx2;
+    var isy=item.y-camY;
+    var psx=P.x,psy=P.y-camY;
+    if(Math.abs(isx-psx)<22&&Math.abs(isy-psy)<26){
+      item.alive=false;
+      if(item.type==='life'){lives=Math.min(lives+1,9);seLife();burst(isx,isy,'#ff4466',12);}
+      else if(item.type==='triple'){tripleTimer=360;seTriple();if(P.onGround)P.jumpsLeft=3;burst(isx,isy,'#cc44ff',12);}
+      else if(item.type==='invincible'){invincible=480;seInv();burst(isx,isy,'#ffdd00',14);}
+      updateHUD();
+    }
+  });
+
+  // パーティクル
+  particles=particles.filter(function(p){return p.life>0;});
+  particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=0.14;p.life--;});
+}
+
+// ==============================
+// DRAW
+// ==============================
+function drawBG(){
+  var lv=getLevel();
+  var th=THEMES[lv];
+  var grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,th.skyT);grad.addColorStop(0.7,th.skyB);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+
+  // 星
+  if(lv>=2){
+    stars.forEach(function(s){
+      s.tw+=0.025;ctx.fillStyle=th.starCol;
+      ctx.globalAlpha=0.25+0.75*Math.abs(Math.sin(s.tw));
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+    });ctx.globalAlpha=1;
+  }
+
+  // 太陽/月
+  ctx.fillStyle=th.sunCol;
+  if(lv<2){ctx.beginPath();ctx.arc(W-55,48,26,0,Math.PI*2);ctx.fill();}
+  else{ctx.beginPath();ctx.arc(W-55,48,18,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=th.skyT;ctx.beginPath();ctx.arc(W-47,42,14,0,Math.PI*2);ctx.fill();}
+
+  // 背景オブジェクト（視差0.35倍速）
+  var scrollX=P.worldX-P.x;
+  bgObjs.forEach(function(o){
+    if(!o.alive)return;
+    var bx=o.x-scrollX*0.35;
+    if(bx>W+100||bx<-200)return;
+    if(o.type==='cloud'){
+      ctx.fillStyle=o.col;
+      ctx.beginPath();ctx.ellipse(bx,o.y,o.w/2,o.h/2,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(bx-o.w*0.22,o.y+5,o.w*0.25,o.h*0.4,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(bx+o.w*0.22,o.y+5,o.w*0.25,o.h*0.4,0,0,Math.PI*2);ctx.fill();
+    }else if(o.type==='hill'){
+      var by=o.baseY-camY;
+      ctx.fillStyle=o.col;
+      ctx.beginPath();ctx.arc(bx,by,o.r,Math.PI,0);ctx.fill();
+    }else if(o.type==='tree'){
+      // ツリーY は地形に合わせる
+      var ty=getTerrainY(bx+scrollX*0.35)-camY;
+      ctx.fillStyle=lv>=3?'#1a1a33':'#5D4037';ctx.fillRect(bx-4,ty-o.h,7,o.h);
+      ctx.fillStyle=lv>=3?'#222244':th.gndFill;
+      ctx.beginPath();ctx.arc(bx,ty-o.h,14,0,Math.PI*2);ctx.fill();
+    }
+  });
+}
+
+function drawTerrain(){
+  var lv=getLevel();
+  var th=THEMES[lv];
+  var scrollX=P.worldX-P.x;
+
+  if(terrainPts.length<2)return;
+
+  // 地面ポリゴン（地形ライン→画面下まで塗りつぶし）
+  ctx.beginPath();
+  ctx.moveTo(terrainPts[0].x-scrollX,terrainPts[0].y-camY);
+  for(var i=1;i<terrainPts.length;i++){
+    var sx=terrainPts[i].x-scrollX;
+    var sy=terrainPts[i].y-camY;
+    ctx.lineTo(sx,sy);
+  }
+  // 画面下へ
+  ctx.lineTo(terrainPts[terrainPts.length-1].x-scrollX,H+20);
+  ctx.lineTo(terrainPts[0].x-scrollX,H+20);
+  ctx.closePath();
+  var ggrad=ctx.createLinearGradient(0,H*0.5,0,H);
+  ggrad.addColorStop(0,th.gndFill);ggrad.addColorStop(1,'#000');
+  ctx.fillStyle=ggrad;ctx.fill();
+
+  // 地面エッジライン
+  ctx.beginPath();
+  ctx.moveTo(terrainPts[0].x-scrollX,terrainPts[0].y-camY);
+  for(var j=1;j<terrainPts.length;j++){
+    ctx.lineTo(terrainPts[j].x-scrollX,terrainPts[j].y-camY);
+  }
+  ctx.strokeStyle=th.gndEdge;ctx.lineWidth=3;
+  if(lv>=2){ctx.shadowColor=th.gndEdge;ctx.shadowBlur=6;}
+  ctx.stroke();ctx.shadowBlur=0;
+
+  // 道路マーキング（地面に沿った点線）
+  ctx.setLineDash([12,10]);
+  ctx.strokeStyle=th.roadCol+'88';ctx.lineWidth=2;ctx.shadowBlur=0;
+  ctx.beginPath();
+  for(var k=0;k<terrainPts.length-1;k++){
+    var ax=terrainPts[k].x-scrollX;
+    var ay=terrainPts[k].y-camY+10;
+    var bx2=terrainPts[k+1].x-scrollX;
+    var by2=terrainPts[k+1].y-camY+10;
+    if(k===0)ctx.moveTo(ax,ay);else ctx.lineTo(ax,ay);
+    ctx.lineTo(bx2,by2);
+  }
+  ctx.stroke();ctx.setLineDash([]);
+
+  // 穴：暗いエフェクト
+  for(var hi=0;hi<terrainPts.length-1;hi++){
+    if(terrainPts[hi].isHole){
+      var hx1=terrainPts[hi].x-scrollX;
+      var hx2=terrainPts[hi+1].x-scrollX;
+      if(hx2<0||hx1>W)continue;
+      ctx.fillStyle='rgba(0,0,0,0.85)';
+      ctx.fillRect(hx1,terrainPts[hi].y-camY,hx2-hx1,H);
+      // 穴の縁に赤いグロー
+      ctx.shadowColor='#ff0000';ctx.shadowBlur=12;
+      ctx.fillStyle='#330000';ctx.fillRect(hx1,terrainPts[hi].y-camY,hx2-hx1,4);
+      ctx.shadowBlur=0;
+    }
+  }
+}
+
+function drawObstacles(){
+  var lv=getLevel();
+  var scrollX=P.worldX-P.x;
+  obstacles.forEach(function(o){
+    if(!o.alive)return;
+    var ox=o.x-scrollX;
+    var oy=o.y-camY-o.h;
+    if(ox>W+30||ox<-30)return;
+    if(o.type==='block'){
+      ctx.fillStyle='#8B0000';ctx.fillRect(ox,oy,o.w,o.h);
+      ctx.fillStyle='#cc3333';ctx.fillRect(ox+2,oy+2,o.w-4,6);
+      ctx.strokeStyle='#ff5555';ctx.lineWidth=1.5;ctx.strokeRect(ox,oy,o.w,o.h);
+    }else{
+      ctx.fillStyle=lv>=3?'#6666cc':'#888888';
+      ctx.beginPath();ctx.moveTo(ox,oy+o.h);ctx.lineTo(ox+o.w/2,oy);ctx.lineTo(ox+o.w,oy+o.h);ctx.fill();
+      ctx.fillStyle=lv>=3?'#9999ee':'#bbbbbb';
+      ctx.beginPath();ctx.moveTo(ox+2,oy+o.h);ctx.lineTo(ox+o.w/2,oy+5);ctx.lineTo(ox+o.w-2,oy+o.h);ctx.fill();
+    }
+  });
+}
+
+var ITEM_EMOJI={life:'❤️',triple:'⬆️',invincible:'⭐'};
+var ITEM_GLOW={life:'#ff4466',triple:'#cc44ff',invincible:'#ffdd00'};
+var ITEM_LABEL={life:'LIFE',triple:'3JUMP',invincible:'STAR'};
+function drawItems(){
+  var scrollX=P.worldX-P.x;
+  items.forEach(function(item){
+    if(!item.alive)return;
+    var ix=item.x-scrollX;
+    var iy=item.y-camY+Math.sin(item.tw||0)*5;
+    if(ix>W+30||ix<-30)return;
+    var pulse=1+0.12*Math.sin(item.tw||0);
+    ctx.save();ctx.translate(ix,iy);ctx.scale(pulse,pulse);
+    ctx.shadowColor=ITEM_GLOW[item.type];ctx.shadowBlur=14;
+    ctx.font='20px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(ITEM_EMOJI[item.type],0,0);ctx.restore();
+    ctx.fillStyle=ITEM_GLOW[item.type];ctx.font='6px monospace';
+    ctx.textAlign='center';ctx.fillText(ITEM_LABEL[item.type],ix,iy-18);ctx.textAlign='left';
+  });
+}
+
+function drawPlayer(){
+  if(invincible>0&&Math.floor(frame/4)%2===0)return;
+  var psx=P.x;
+  var psy=P.y-camY;
+
+  ctx.save();
+  ctx.translate(psx,psy);
+  ctx.rotate(P.angle);
+
+  if(invincible>0){ctx.shadowColor='#ffdd00';ctx.shadowBlur=18;}
+  else if(tripleTimer>0){ctx.shadowColor='#cc44ff';ctx.shadowBlur=12;}
+
+  var x=-P.w/2,y=-P.h;
+
+  // タイヤ
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath();ctx.arc(x+6,y+P.h-4,10,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+P.w-6,y+P.h-4,10,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#444';
+  ctx.beginPath();ctx.arc(x+6,y+P.h-4,5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+P.w-6,y+P.h-4,5,0,Math.PI*2);ctx.fill();
+
+  // スポーク
+  ctx.strokeStyle='#666';ctx.lineWidth=1;
+  var spin=frame*0.2*(gameSpeed/3.5);
+  [[x+6,y+P.h-4],[x+P.w-6,y+P.h-4]].forEach(function(c){
+    for(var s=0;s<4;s++){var a=spin+s*Math.PI/2;ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(c[0]+Math.cos(a)*9,c[1]+Math.sin(a)*9);ctx.stroke();}
+  });
+
+  // フレーム
+  ctx.strokeStyle='#cc2222';ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.moveTo(x+6,y+P.h-4);   // 後輪中心
+  ctx.lineTo(x+P.w*0.45,y+P.h*0.45); // シートポスト下
+  ctx.lineTo(x+P.w*0.55,y+P.h*0.2);  // ヘッドチューブ
+  ctx.lineTo(x+P.w-6,y+P.h-4); // 前輪中心
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x+P.w*0.45,y+P.h*0.45);
+  ctx.lineTo(x+P.w*0.7,y+P.h*0.45);
+  ctx.stroke();
+
+  // ハンドル
+  ctx.strokeStyle='#888';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x+P.w*0.55,y+P.h*0.2);ctx.lineTo(x+P.w*0.55,y+P.h*0.05);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+P.w*0.48,y+P.h*0.05);ctx.lineTo(x+P.w*0.65,y+P.h*0.05);ctx.stroke();
+
+  // サドル
+  ctx.fillStyle='#333';ctx.fillRect(x+P.w*0.35,y+P.h*0.38,P.w*0.22,4);
+
+  // ライダー体
+  ctx.fillStyle='#3355bb';
+  ctx.fillRect(x+P.w*0.38,y+P.h*0.1,P.w*0.24,P.h*0.3);
+  // 頭
+  ctx.fillStyle='#ffcc88';
+  ctx.beginPath();ctx.arc(x+P.w*0.55,y+P.h*0.06,8,0,Math.PI*2);ctx.fill();
+  // ヘルメット
+  ctx.fillStyle='#cc2222';
+  ctx.beginPath();ctx.arc(x+P.w*0.55,y+P.h*0.02,9,Math.PI,0);ctx.fill();
+
+  // 足（ペダリング）
+  var legA=frame*0.22;
+  ctx.fillStyle='#222';
+  ctx.fillRect(x+P.w*0.42+Math.cos(legA)*7,y+P.h*0.5+Math.sin(legA)*6,5,3);
+  ctx.fillRect(x+P.w*0.42+Math.cos(legA+Math.PI)*7,y+P.h*0.5+Math.sin(legA+Math.PI)*6,5,3);
+
+  ctx.restore();
+}
+
+function drawParticles(){
+  particles.forEach(function(p){
+    ctx.globalAlpha=p.life/p.maxLife;ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,p.size,p.size);
+  });ctx.globalAlpha=1;
+}
+
+function drawHUD(){
+  var lv=getLevel();var th=THEMES[lv];
+  var lvCols=['#FFD700','#ff8800','#00ffaa','#7777ff','#ff3300'];
+
+  ctx.fillStyle='#ffdd00';ctx.font='bold 10px monospace';ctx.fillText('DIST: '+Math.floor(dist)+'m',10,22);
+  ctx.fillStyle='#888';ctx.font='8px monospace';ctx.fillText('BEST: '+Math.floor(hiDist)+'m',10,34);
+  ctx.fillStyle='#aaa';ctx.font='8px monospace';ctx.fillText('SPD: '+(gameSpeed).toFixed(1),10,46);
+
+  ctx.fillStyle=lvCols[lv];ctx.font='bold 8px monospace';ctx.textAlign='right';
+  ctx.shadowColor=lvCols[lv];ctx.shadowBlur=6;ctx.fillText('LV'+lv+' '+th.name,W-8,22);ctx.shadowBlur=0;
+  var bgmN=['FOLK','POP','ROCK','TECHNO','METAL'];
+  ctx.fillStyle=th.accent+'aa';ctx.font='7px monospace';ctx.fillText('♪'+bgmN[lv],W-8,34);ctx.textAlign='left';
+
+  // ジャンプ残量
+  var maxJ=P.maxJumps;
+  ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.lineWidth=1.5;
+  for(var i=0;i<maxJ;i++){
+    ctx.strokeRect(W-22-i*15,38,12,12);
+    if(i<P.jumpsLeft){ctx.fillStyle='rgba(255,255,255,0.55)';ctx.fillRect(W-21-i*15,39,10,10);}
+  }
+
+  // LEVEL UP
+  if(levelUpTimer>0){
+    var al=Math.min(1,levelUpTimer/30);
+    ctx.fillStyle='rgba(0,0,0,'+(al*0.55)+')';ctx.fillRect(0,H/2-38,W,76);
+    ctx.globalAlpha=al;ctx.fillStyle=th.accent;ctx.shadowColor=th.accent;ctx.shadowBlur=22;
+    ctx.font='bold 20px monospace';ctx.textAlign='center';ctx.fillText('LEVEL UP!',W/2,H/2-8);
+    ctx.font='bold 12px monospace';ctx.fillText('LV'+lv+' '+th.name,W/2,H/2+16);
+    ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.textAlign='left';levelUpTimer--;
+  }
+
+  // パワーアップ
+  var pu=document.getElementById('powerups');var txt='';
+  if(invincible>0)txt+='<span style="color:#ffdd00">⭐'+Math.ceil(invincible/60)+'s</span> ';
+  if(tripleTimer>0)txt+='<span style="color:#cc44ff">⬆️'+Math.ceil(tripleTimer/60)+'s</span>';
+  pu.innerHTML=txt;
+}
+
+function updateHUD(){
+  document.getElementById('lives').textContent='❤️'.repeat(Math.max(0,lives));
+  document.getElementById('score-display').textContent='DIST: '+Math.floor(dist)+'m';
+}
+
+function drawTitle(){
+  var grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#87CEEB');grad.addColorStop(1,'#c8e8ff');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  // 地面
+  ctx.fillStyle='#228B22';ctx.fillRect(0,H*0.65,W,H*0.35);
+  ctx.fillStyle='#33aa33';ctx.fillRect(0,H*0.65,W,3);
+  // 坂道イメージ
+  ctx.fillStyle='#1a6b1a';
+  ctx.beginPath();ctx.moveTo(0,H*0.8);ctx.lineTo(120,H*0.55);ctx.lineTo(240,H*0.7);ctx.lineTo(360,H*0.5);ctx.lineTo(360,H);ctx.lineTo(0,H);ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.68)';ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  ctx.shadowColor='#FFD700';ctx.shadowBlur=28;
+  ctx.fillStyle='#FFD700';ctx.font='bold 30px monospace';ctx.fillText('CHARI RUN',W/2,H/2-95);
+  ctx.font='bold 12px monospace';ctx.fillStyle='#fff';ctx.fillText('坂道を駆け抜けろ！',W/2,H/2-65);
+  ctx.shadowBlur=0;
+  var info=[
+    ['落とし穴＝ゲームオーバー','#ffdd00',9],
+    ['障害物に当たるとライフ減','#ffdd00',9],
+    ['❤️ライフ  ⬆️3段ジャンプ','#aaffdd',9],
+    ['⭐無敵（8秒）','#ffdd00',9],
+    ['坂道・丘・段差を越えよう！','#ffcc88',9],
+    ['距離でBGM＆背景が変わる','#ff88ff',8],
+  ];
+  var sy=H/2-38;
+  info.forEach(function(v){ctx.fillStyle=v[1];ctx.font=v[2]+'px monospace';ctx.fillText(v[0],W/2,sy);sy+=19;});
+  if(Math.floor(frame/30)%2===0){ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.fillText('TAP TO START',W/2,sy+8);}
+  ctx.textAlign='left';
+}
+
+function drawGameOver(){
+  ctx.fillStyle='rgba(0,0,0,0.83)';ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  ctx.fillStyle='#ff4466';ctx.shadowColor='#ff4466';ctx.shadowBlur=18;
+  ctx.font='bold 22px monospace';ctx.fillText('GAME OVER',W/2,H/2-58);ctx.shadowBlur=0;
+  ctx.fillStyle='#ffdd00';ctx.font='bold 13px monospace';
+  ctx.fillText('DIST: '+Math.floor(dist)+'m',W/2,H/2-18);
+  ctx.fillText('BEST: '+Math.floor(hiDist)+'m',W/2,H/2+8);
+  var lv=getLevel();
+  ctx.fillStyle=THEMES[lv].accent;ctx.font='10px monospace';
+  ctx.fillText('MAX: LV'+lv+' '+THEMES[lv].name,W/2,H/2+34);
+  if(Math.floor(frame/30)%2===0){ctx.fillStyle='#fff';ctx.font='bold 13px monospace';ctx.fillText('TAP TO RETRY',W/2,H/2+64);}
+  ctx.textAlign='left';
+}
+
+function doJump(){
+  if(state==='title'||state==='gameover'){initGame();return;}
+  if(state==='play'&&P.jumpsLeft>0){
+    var n=P.maxJumps-P.jumpsLeft;
+    if(n===0)seJump();else if(n===1)seJump2();else seJump3();
+    P.vy=n===0?-11:(n===1?-10:-9);
+    P.jumpsLeft--;P.onGround=false;
+  }
+}
+
+document.addEventListener('keydown',function(e){if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();doJump();}});
+canvas.addEventListener('pointerdown',function(e){e.preventDefault();doJump();});
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(state==='title'){drawTitle();return;}
+  drawBG();
+  drawTerrain();
+  drawObstacles();
+  drawItems();
+  drawPlayer();
+  drawParticles();
+  drawHUD();
+  if(state==='gameover')drawGameOver();
+  document.getElementById('msg').style.display=state==='play'?'none':'block';
+}
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+initGame();
+loop();
+</script>
+
+</body>
+</html>

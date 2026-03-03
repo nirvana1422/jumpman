@@ -178,7 +178,40 @@ function update(dt){
 
   if(--iTm<=0){iTm=280+Math.random()*380;const tp=['life','speed','inv'][Math.floor(Math.random()*3)];items.push({x:30+Math.random()*(W-60),y:-20,type:tp,rot:0});}
 
-  buls.forEach(b=>{enems.forEach(e=>{if(!e.alive||b.dead)return;if(Math.abs(b.x-e.x)<e.w/2&&Math.abs(b.y-e.y)<e.h/2){b.dead=true;e.alive=false;score+=e.pts;kills++;snd.explode();spawnFx(e.x,e.y,e.color);checkLv();updUI();}});});
+  // 自機弾と敵の当たり判定
+  buls.forEach(b=>{
+    enems.forEach(e=>{
+      if(!e.alive||b.dead) return;
+      if(Math.abs(b.x-e.x)<e.w/2 && Math.abs(b.y-e.y)<e.h/2){
+        b.dead=true;
+        e.alive=false;
+        score+=e.pts;
+        kills++;
+        snd.explode();
+        spawnFx(e.x,e.y,e.color);
+        checkLv();
+        updUI();
+      }
+    });
+  });
+
+  // --- 追加：自機弾とバリアの衝突判定（バリアで弾を消す） ---
+  buls.forEach(b=>{
+    if(b.dead) return;
+    bars.forEach(br=>{
+      if(br.hp<=0) return;
+      if(
+        b.x > br.x &&
+        b.x < br.x + br.w &&
+        b.y > br.y &&
+        b.y < br.y + br.h
+      ){
+        b.dead = true; // 弾を消す（バリア自体は削らない）
+      }
+    });
+  });
+  // --- ここまでバリア判定 ---
+
   buls=buls.filter(b=>!b.dead);
 
   ebuls.forEach(b=>{bars.forEach(br=>{if(br.hp<=0)return;if(b.x>br.x&&b.x<br.x+br.w&&b.y>br.y&&b.y<br.y+br.h){b.dead=true;br.hp--;}});});

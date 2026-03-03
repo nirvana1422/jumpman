@@ -59,7 +59,7 @@ if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; }
 var D = BGMS[lv], a = getAC();
 var mLen = D.notes.reduce(function(s,n){ return s+n[1]; }, 0);
 var bLen = D.bass.reduce(function(s,n){ return s+n[1]; }, 0);
-function loop(st) {
+function bgmLoop(st) {
 if (bgmLv !== lv) return;
 var t = st;
 D.notes.forEach(function(n){ if(n[0]>0) beep(n[0],D.mt,n[1]*.75,D.mv,t-a.currentTime); t+=n[1]; });
@@ -68,9 +68,9 @@ var rep = Math.ceil(mLen/bLen);
 for (var r=0; r<rep; r++) D.bass.forEach(function(n){ if(n[0]>0) beep(n[0],D.bt,n[1]*.7,D.bv,t-a.currentTime); t+=n[1]; });
 if (D.kick>0) for (var k=0; k<=Math.floor(mLen/D.kick); k++) beep(80,‘sine’,.12,.22,st+k*D.kick-a.currentTime);
 if (D.hat>0)  for (var h=0; h<=Math.floor(mLen/D.hat);  h++) beep(8000,‘sawtooth’,.02,.02,st+h*D.hat-a.currentTime);
-bgmTimer = setTimeout(function(){ loop(a.currentTime+.08); }, (mLen-.3)*1000);
+bgmTimer = setTimeout(function(){ bgmLoop(a.currentTime+.08); }, (mLen-.3)*1000);
 }
-loop(a.currentTime + .08);
+bgmLoop(a.currentTime + .08);
 }
 
 // ============================================================

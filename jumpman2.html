@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>JUMP MAN 2 — 空中横遅く（地上速度復帰）</title>
+<title>JUMP MAN 2</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;touch-action:none;}
   html,body{height:100%;}
@@ -47,7 +47,7 @@
 </style>
 </head>
 <body>
-<div id="logo"><div class="mark">J2</div><div>JUMP MAN 2 — 空中横遅く（地上速度復帰）</div></div>
+<div id="logo"><div class="mark">J2</div><div>JUMP MAN 2</div></div>
 
 <div id="hud">
   <span id="lives">❤️❤️❤️</span>
@@ -61,14 +61,14 @@
 <div class="title-overlay" id="titleOverlay">
   <div class="title-card" id="titleCard">
     <h1>JUMP MAN 2</h1>
-    <p>【変更点】地上速度を復帰、空中では横を遅くしてジャンプ角度を上向きに。横動作は慣性でゆっくり反応します。</p>
-    <div class="note">地上速度: 元に戻しました / 空中横: 遅め（慣性あり）</div>
+    <p>地上は速く、ジャンプ中は横移動がゆっくりに。</p>
+    <div class="note">地上速度: 速め / 空中横: 遅め（慣性あり）</div>
     <div class="start-pulse" id="startPulse">TAP TO START</div>
   </div>
 </div>
 
 <script>
-/* オーディオ（既存ロジック） */
+/* オーディオ */
 var _AC=null;function ac(){if(!_AC)_AC=new(window.AudioContext||window.webkitAudioContext)();return _AC;}
 function tone(f,type,dur,vol,t0){vol=vol||0.1;t0=t0||0;try{var a=ac(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type=type;o.frequency.value=f;var s=a.currentTime+t0;g.gain.setValueAtTime(vol,s);g.gain.exponentialRampToValueAtTime(0.001,s+dur);o.start(s);o.stop(s+dur+0.05);}catch(e){}}
 function kick(t0,freq,dec){freq=freq||160;dec=dec||0.12;try{var a=ac(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';var s=a.currentTime+t0;o.frequency.setValueAtTime(freq,s);o.frequency.exponentialRampToValueAtTime(30,s+dec);g.gain.setValueAtTime(0.32,s);g.gain.exponentialRampToValueAtTime(0.001,s+dec+0.05);o.start(s);o.stop(s+dec+0.1);}catch(e){}}
@@ -83,21 +83,20 @@ var seLife=function(){[523,659,784,1047].forEach(function(f,i){tone(f,'square',0
 var seSpeed=function(){[300,400,500,600].forEach(function(f,i){tone(f,'sawtooth',0.08,0.11,i*0.06);});};
 var seTriple=function(){[400,600,800,1050].forEach(function(f,i){tone(f,'square',0.09,0.13,i*0.07);});};
 
-/* ゲーム本体（横速度補間を導入、地上速度を復帰、空中横倍率を低めに設定） */
+/* ゲーム本体 */
 var canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
 var W=canvas.width,H=canvas.height,GND=H-60;
 var state='title',score=0,lives=3,hiScore=0,frame=0,lastLevel=0;
 
 var P={
   x:W/2,y:GND,vy:0,w:28,h:36,dir:1,
-  baseSpeed:4.6, // 地上速度を元に戻した
+  baseSpeed:6.2,        // ★地上の基本速度を速く（元の4.6より上げた）
   onGround:true,jumpsLeft:2,invincible:0,speedTimer:0,tripleTimer:0,
-  vx:0, // 横速度（慣性用）
-  airHorzFactor:0.5, // 空中での横成分倍率（遅くする）
-  interp:0.12, // 補間量（0〜1、小さいほど慣性が強い）
+  vx:0,
+  airHorzFactor:0.32,   // ★空中横速度倍率（低いほどジャンプ中が遅い）
+  interp:0.10,          // 補間量（慣性の強さ、小さいほど遅れて動く）
   get effectiveSpeed(){
-    // speedTimer はパワーアップ優先（地上）、空中は倍率をかける
-    var base = (this.speedTimer>0) ? 6.5 : this.baseSpeed;
+    var base = (this.speedTimer>0) ? 7.8 : this.baseSpeed;
     return this.onGround ? base : base * this.airHorzFactor;
   },
   get currentMaxJumps(){return this.tripleTimer>0?3:2;}
@@ -234,7 +233,6 @@ function doJump(){
   if(state==='play'&&P.jumpsLeft>0){
     var n=P.currentMaxJumps-P.jumpsLeft;
     if(n===0)seJump();else if(n===1)seJump2();else seJump3();
-    // 垂直を強めて上に飛ぶ感（1段-16,2段-14,3段-13）
     P.vy = (n===0) ? -16 : (n===1 ? -14 : -13);
     P.jumpsLeft--;P.onGround=false;
     afterImages.push({x:P.x,y:P.y,dir:P.dir,life:14,maxLife:14});
@@ -250,18 +248,24 @@ function update(){
   frame++;if(state!=='play')return;
   var lv=getLevel();
   if(lv!==lastLevel){lastLevel=lv;levelUpTimer=90;}
-  // 横速度を目標へ滑らかに補間して移動（慣性で左右の動きが遅く感じる）
+
+  // ★横移動：地上は速く、空中は遅い目標速度に慣性で近づく
   var target = P.effectiveSpeed * P.dir;
   P.vx += (target - P.vx) * P.interp;
   P.x += P.vx;
 
-  // 画面端で反転（反転時にvxを反転させて自然に戻す）
+  // 画面端で反転
   if(P.x > W - P.w/2){ P.x = W - P.w/2; P.dir = -1; P.vx = -Math.abs(P.vx)*0.5; }
   if(P.x < P.w/2){ P.x = P.w/2; P.dir = 1; P.vx = Math.abs(P.vx)*0.5; }
 
   P.vy += 0.5; P.y += P.vy;
-  if(P.y >= GND){ P.y = GND; P.vy = 0; P.onGround = true; P.jumpsLeft = P.currentMaxJumps; P.vx *= 0.85; } // 着地で横慣性を少し減衰
-  else P.onGround = false;
+  if(P.y >= GND){
+    P.y = GND; P.vy = 0; P.onGround = true; P.jumpsLeft = P.currentMaxJumps;
+    // ★着地時に横速度をリセットして地上速度に素早く切り替わるようにする
+    P.vx *= 0.6;
+  } else {
+    P.onGround = false;
+  }
 
   if(P.invincible>0)P.invincible--;if(P.speedTimer>0)P.speedTimer--;
   if(P.tripleTimer>0){P.tripleTimer--;if(P.tripleTimer===0&&P.jumpsLeft>2)P.jumpsLeft=2;}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<title>JUMP MAN 2 — faster horizontal, quicker fall</title>
+<title>JUMP MAN 2 — baseSpeed visible (空中横遅め)</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;touch-action:none}
   body{background:#120718;display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#fff}
@@ -15,25 +15,24 @@
 </head>
 <body>
 <div id="hud">
-  <div id="title">JUMP MAN 2 — faster horizontal, quicker fall</div>
+  <div id="title">JUMP MAN 2 — baseSpeed visible</div>
   <div id="info">SCORE: <span id="score">0</span></div>
 </div>
 <canvas id="canvas" width="360" height="480"></canvas>
-<div id="titleNote">CONFIGだけ変えれば微調整可能です</div>
+<div id="titleNote">変更点: baseSpeed を直接編集できます。空中横を遅く/慣性で"もっさり"感。</div>
 <div id="msg">クリック/タップ or Spaceでジャンプ（2段可）</div>
 
 <script>
-/* ====== 設定（このブロックだけ触ればOK） ====== */
+/* ====== 設定（ここだけ編集すれば調整可能） ====== */
 const CONFIG = {
-  baseSpeed: 7.0,         // ← 地上での基本横速を増加（左右を速くする）
-  airHorzFactor: 0.60,    // ← 空中での横速度比（空中横もある程度欲しい場合0.5→0.6に）
-  interp: 0.22,           // ← 補間（慣性）：大きいほど操作が即応（0.14→0.22でより素早く）
-  gravity: 0.6,           // ← 基本重力（毎フレームの増分。大きいほど落ちやすい）
-  fallMultiplier: 1.9,    // ← 下降時にかかる追加倍率（>1でジャンプ後すぐ落ちる）
-  jumpVelocities: [-16, -14, -12], // ← 1段目、2段目、3段目の初速（そのまま）
-  afterImageFrames: 12,
-  afterImageInterval: 3,
-  maxAfterImages: 18
+  baseSpeed: 7.6,         // ← 地上での基本横速（これを上げれば「左右の速さ」が上がる）
+  airHorzFactor: 0.3,     // ← 空中時の横速度比（0.0〜1.0）。小さいほど垂直寄りに飛ぶ
+  interp: 0.14,           // ← 補間係数（慣性）：小さいほどもっさり、1に近いほど即応
+  gravity: 0.5,           // ← 重力（毎フレーム増分）
+  jumpVelocities: [-16, -14, -12], // ← 1段目、2段目、3段目の初速（負の値が上方向）
+  afterImageFrames: 12,   // ← 残像の寿命（フレーム）
+  afterImageInterval: 3,  // ← 残像を追加する間隔（フレーム）
+  maxAfterImages: 18      // ← 残像配列の最大数
 };
 /* ================================================ */
 
@@ -44,23 +43,25 @@ const W = canvas.width, H = canvas.height, GND = H - 60;
 let frame = 0, score = 0;
 document.getElementById('score').textContent = score;
 
+// プレイヤー（分かりやすいフィールド名）
 const Player = {
   x: W/2,
   y: GND,
   w: 28,
   h: 36,
   vy: 0,
-  vx: 0,
-  dir: 1,
+  vx: 0,            // 現在の横速度（補間で変化）
+  dir: 1,           // 自動で左右を反転する場合の向き（+1右、-1左）
   onGround: true,
   jumpsLeft: 2,
-  invincible: 0,
-  get currentMaxJumps(){ return 2; }
+  invincible: 0
 };
 
+// 残像, 敵など最小限の要素（敵は簡易）
 let afterImages = [];
+let enemies = [];
 
-/* 簡易音（ブラウザの許可が必要） */
+/* シンプルなサウンド（ブラウザで許可が必要） */
 function tone(f,dur, type='sine', vol=0.08, t0=0){
   try{
     const a = new (window.AudioContext || window.webkitAudioContext)();
@@ -74,126 +75,154 @@ function tone(f,dur, type='sine', vol=0.08, t0=0){
     o.start(s); o.stop(s + dur + 0.02);
   }catch(e){}
 }
-function playJumpSound(stage){
-  if(stage===0) tone(380,0.08,'square',0.12);
-  else if(stage===1) tone(520,0.08,'square',0.12);
+function playJumpSound(n){
+  if(n===0) tone(380,0.08,'square',0.12);
+  else if(n===1) tone(520,0.08,'square',0.12);
   else tone(680,0.08,'square',0.12);
 }
 
 /* 入力 */
 document.addEventListener('keydown', e => {
-  if(e.code === 'Space'){ e.preventDefault(); doJump(); }
+  if(e.code === 'Space') { e.preventDefault(); doJump(); }
 });
 canvas.addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
 
-/* ジャンプ */
+/* ジャンプ処理 */
 function doJump(){
   if(Player.jumpsLeft <= 0) return;
+  const n = (Player.onGround ? 0 : (Player.jumpsLeft === Player.currentMaxJumps-1 ? 1 : 2)); // simpler index
+  // 実際は以下で n を計算：現在残りから何回目かを判定
+  // 代わりに使いやすくするため、使うのは (currentMaxJumps - jumpsLeft)
   const used = Player.currentMaxJumps - Player.jumpsLeft;
-  const idx = Math.min(used, CONFIG.jumpVelocities.length - 1);
+  const idx = Math.min(used, CONFIG.jumpVelocities.length-1);
   Player.vy = CONFIG.jumpVelocities[idx];
   Player.jumpsLeft--;
   Player.onGround = false;
+  // 残像一発
   afterImages.push({x:Player.x, y:Player.y, dir:Player.dir, life:CONFIG.afterImageFrames, maxLife:CONFIG.afterImageFrames});
   if(afterImages.length > CONFIG.maxAfterImages) afterImages.shift();
   playJumpSound(used);
 }
 
-/* 更新（重力とfallMultiplierの適用） */
+/* currentMaxJumps 計算（拡張のため） */
+Object.defineProperty(Player, 'currentMaxJumps', {
+  get: function(){ return 2; } // 今は常に2段。アイテムで変えるならここを更新
+});
+
+/* 更新（物理・敵・アイテムの最小動作） */
 function update(){
   frame++;
 
-  // 目標横速度（地上では baseSpeed、空中は airHorzFactor をかける）
+  // 自動で左右に動くデモ：端で向きを反転
+  // 目標速度 = baseSpeed * dir, 空中なら factor を乗じる
   const base = CONFIG.baseSpeed;
   const target = (Player.onGround ? base : base * CONFIG.airHorzFactor) * Player.dir;
 
-  // 補間で滑らかに近づける（interpを上げてレスポンスUP）
+  // 補間（慣性）で vx を滑らかに近づける
   Player.vx += (target - Player.vx) * CONFIG.interp;
   Player.x += Player.vx;
 
-  // 端で反転・慣性処理
+  // 横端で反転（画面端対策）
   if(Player.x > W - Player.w/2){
     Player.x = W - Player.w/2;
     Player.dir = -1;
-    Player.vx = -Math.abs(Player.vx) * 0.5;
-  } else if(Player.x < Player.w/2){
+    Player.vx = -Math.abs(Player.vx) * 0.5; // 反転時に慣性を少し落とす
+  }else if(Player.x < Player.w/2){
     Player.x = Player.w/2;
     Player.dir = 1;
     Player.vx = Math.abs(Player.vx) * 0.5;
   }
 
-  // 重力適用（落下中はfallMultiplierで早く）
-  if(Player.vy > 0){ // 既に降下中
-    Player.vy += CONFIG.gravity * CONFIG.fallMultiplier;
-  } else {
-    Player.vy += CONFIG.gravity;
-  }
+  // 重力
+  Player.vy += CONFIG.gravity;
   Player.y += Player.vy;
 
-  // 着地処理
+  // 着地判定
   if(Player.y >= GND){
     Player.y = GND;
     Player.vy = 0;
     Player.onGround = true;
     Player.jumpsLeft = Player.currentMaxJumps;
-    Player.vx *= 0.85; // 着地で減衰
-  } else {
+    // 着地で横慣性を少し減衰
+    Player.vx *= 0.85;
+  }else{
     Player.onGround = false;
   }
 
-  // 上昇中の残像自動追加
+  // 残像自動追加（上昇中）
   if(!Player.onGround && Player.vy < 0 && frame % CONFIG.afterImageInterval === 0){
     afterImages.push({x:Player.x, y:Player.y, dir:Player.dir, life:CONFIG.afterImageFrames, maxLife:CONFIG.afterImageFrames});
     if(afterImages.length > CONFIG.maxAfterImages) afterImages.shift();
   }
 
-  // デモ用小スコア処理
+  // 簡易敵：落ちてきて地面についたらライフ減（デモ用）
+  // ここでは省略してスコアだけ加算（プレースホルダ）
   if(frame % 1800 === 0){ score += 50; document.getElementById('score').textContent = score; }
 }
 
 /* 描画 */
 function draw(){
-  // 背景
+  // 背景（雰囲気変化しても良い）
   const grad = ctx.createLinearGradient(0,0,0,H);
   grad.addColorStop(0, '#1a0026'); grad.addColorStop(1, '#0c0010');
-  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
 
   // 地面
-  ctx.fillStyle = '#201018'; ctx.fillRect(0, GND, W, H - GND);
+  ctx.fillStyle = '#201018';
+  ctx.fillRect(0, GND, W, H - GND);
 
-  // グリッド
-  ctx.strokeStyle = 'rgba(255,180,120,0.06)'; ctx.lineWidth = 1;
-  for(let x=0;x<W;x+=30){ ctx.beginPath(); ctx.moveTo(x, GND); ctx.lineTo(x, H); ctx.stroke(); }
+  // グリッドライン
+  ctx.strokeStyle = 'rgba(255,180,120,0.06)';
+  ctx.lineWidth = 1;
+  for(let x=0;x<W;x+=30){
+    ctx.beginPath(); ctx.moveTo(x, GND); ctx.lineTo(x, H); ctx.stroke();
+  }
 
-  // 残像
+  // 残像を描く（古いものほど薄く）
   for(let i=0;i<afterImages.length;i++){
     const a = afterImages[i];
     const t = a.life / a.maxLife;
     ctx.save();
     ctx.globalAlpha = 0.08 + 0.6 * t;
-    if(a.dir === -1){ ctx.translate(a.x,0); ctx.scale(-1,1); ctx.translate(-a.x,0); }
+    if(a.dir === -1){
+      ctx.translate(a.x,0); ctx.scale(-1,1); ctx.translate(-a.x,0);
+    }
     const px = a.x - Player.w/2, py = a.y - Player.h;
     const scale = 1 - (1 - t) * 0.14;
     ctx.translate(px + Player.w/2, py + Player.h/2);
     ctx.scale(scale, scale);
     ctx.translate(-(px + Player.w/2), -(py + Player.h/2));
-    ctx.fillStyle = '#7fdcff'; ctx.fillRect(px+4, py+14, Player.w-8, Player.h-14);
-    ctx.fillStyle = '#bff7ff'; ctx.fillRect(px+2, py+14, Player.w-4, Player.h-22);
-    ctx.fillStyle = '#ffd7a6'; ctx.fillRect(px+6, py, Player.w-12, 14);
+    // 簡素な矩形キャラを残像で描く
+    ctx.fillStyle = '#7fdcff';
+    ctx.fillRect(px+4, py+14, Player.w-8, Player.h-14);
+    ctx.fillStyle = '#bff7ff';
+    ctx.fillRect(px+2, py+14, Player.w-4, Player.h-22);
+    ctx.fillStyle = '#ffd7a6';
+    ctx.fillRect(px+6, py, Player.w-12, 14);
     ctx.restore();
+    // life を減らす
     a.life--;
   }
+  // 古くなった残像を削除
   afterImages = afterImages.filter(a => a.life > 0);
 
-  // プレイヤー
+  // プレイヤー（常に上に描く）
   if(!(Player.invincible>0 && Math.floor(frame/6)%2===0)){
     ctx.save();
     if(Player.dir === -1){ ctx.translate(Player.x,0); ctx.scale(-1,1); ctx.translate(-Player.x,0); }
     const px = Player.x - Player.w/2, py = Player.y - Player.h;
-    ctx.fillStyle = '#0088aa'; ctx.fillRect(px+4, py+14, Player.w-8, Player.h-14);
-    ctx.fillStyle = '#00ddff'; ctx.fillRect(px+2, py+14, Player.w-4, Player.h-22);
-    ctx.fillStyle = '#ffcc88'; ctx.fillRect(px+6, py, Player.w-12, 14);
-    ctx.fillStyle = '#000'; ctx.fillRect(px+10, py+4, 3, 3);
+    // 本体
+    ctx.fillStyle = '#0088aa';
+    ctx.fillRect(px+4, py+14, Player.w-8, Player.h-14);
+    ctx.fillStyle = '#00ddff';
+    ctx.fillRect(px+2, py+14, Player.w-4, Player.h-22);
+    ctx.fillStyle = '#ffcc88';
+    ctx.fillRect(px+6, py, Player.w-12, 14);
+    // 目など
+    ctx.fillStyle = '#000';
+    ctx.fillRect(px+10, py+4, 3, 3);
+    // 足
     ctx.fillStyle = '#333';
     const leg = Player.onGround ? Math.sin(frame*0.32)*5 : 0;
     ctx.fillRect(px+4, py+Player.h-8, 8, 8 + leg);
@@ -201,11 +230,23 @@ function draw(){
     ctx.restore();
   }
 
+  // HUD系はDOMで表示しているのでここでは描かない
 }
 
 /* ループ */
-function loop(){ update(); draw(); requestAnimationFrame(loop); }
-loop();
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* 初期化 */
+function init(){
+  // canvas を画面に合わせたいならここでスケール処理を追加
+  loop();
+}
+init();
+
 </script>
 </body>
 </html>

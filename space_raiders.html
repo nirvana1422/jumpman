@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>SPACE RAIDERS</title>
 <style>
@@ -91,7 +91,7 @@ function drawBg(){
 let gs='title',score=0,lives=3,level=1,kills=0;
 const KPL=20;
 let pl,buls,ebuls,enems,bars,items,parts;
-let eDir,eDrop,sTm,esTm,iTm;
+let eDir,sTm,esTm,iTm,eMoveTimer;
 let inv=false,invT=0,spd=false,spdT=0;
 let tL=false,tR=false;
 
@@ -109,11 +109,12 @@ function initGame(){
   pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.007,color:'#00ffcc'};
   buls=[];ebuls=[];parts=[];items=[];
   sTm=0;esTm=0;iTm=260;inv=false;invT=0;spd=false;spdT=0;
+  eMoveTimer = 0;
   spawnEnemies();initBars();
 }
 
 function spawnEnemies(){
-  enems=[];eDir=1;eDrop=false;
+  enems=[];eDir=1;
   const cols=9,rows=4,ex=W*0.06,ey=H*0.12;
   const gx=(W-ex*2)/cols,gy=H*0.055;
   const sp=0.55+(level-1)*0.22;
@@ -146,11 +147,28 @@ function update(dt){
   let minX=Infinity,maxX=-Infinity,maxY=-Infinity;
   alive.forEach(e=>{minX=Math.min(minX,e.x-e.w/2);maxX=Math.max(maxX,e.x+e.w/2);maxY=Math.max(maxY,e.y+e.h/2);});
 
-  const sp2=(0.55+(level-1)*0.22)*dt*0.38;
-  if(!eDrop){
-    alive.forEach(e=>{e.x+=eDir*sp2;e.frt++;if(e.frt>22){e.fr=1-e.fr;e.frt=0;}});
-    if(maxX>=W-6||minX<=6){eDir*=-1;eDrop=true;}
-  }else{alive.forEach(e=>e.y+=9);eDrop=false;}
+  // --- インベーダー風：時間間隔で一歩ずつ移動 ---
+  eMoveTimer += dt;
+  // 基本移動間隔（ms）。レベルが上がると速くなる（ただし最短120ms）
+  const moveInterval = Math.max(120, 700 - (level-1) * 40);
+  if(eMoveTimer >= moveInterval){
+    eMoveTimer = 0;
+    // 1ステップの横移動量／下がる量（ピクセル）
+    const stepX = Math.max(6, W * 0.03);
+    const stepY = Math.max(8, H * 0.03);
+
+    const nextMinX = minX + eDir * stepX;
+    const nextMaxX = maxX + eDir * stepX;
+
+    if(nextMaxX >= W - 12 || nextMinX <= 12){
+      alive.forEach(e => e.y += stepY);
+      eDir *= -1;
+      if(maxY + stepY >= pl.y - pl.h){ loseLv(); return; }
+    } else {
+      alive.forEach(e => { e.x += eDir * stepX; e.frt++; if(e.frt > 12){ e.fr = 1 - e.fr; e.frt = 0; } });
+    }
+  }
+  // --- ここまでインベーダー風移動 ---
 
   if(maxY>=pl.y-pl.h){loseLv();return;}
 

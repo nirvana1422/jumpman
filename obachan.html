@@ -193,7 +193,8 @@ x:x, y:-30, w:22, h:22,
 bx:x, range:35+Math.random()*70,
 dir:Math.random()<0.5?1:-1,
 spd:0.8+Math.random()*1.2+lvl*0.3,
-animT:Math.random()*60|0
+animT:Math.random()*60|0,
+dead:false, deadTimer:0
 });
 }
 
@@ -358,6 +359,7 @@ if (lvl >= 3 && Math.random() < 0.3) spawnEnemy(); // LV3+で3体目も
 // 敵移動
 for (var i=0; i<enemies.length; i++) {
 var e = enemies[i];
+if (e.dead) continue;
 e.x += e.dir * e.spd;
 if (e.x > e.bx + e.range) e.dir = -1;
 if (e.x < e.bx - e.range) e.dir =  1;
@@ -385,8 +387,8 @@ var eTop = e.y - e.h/2;
 if (edx < 18 && PL.vy > 0 && pBot >= eTop - 4 && pBot <= eTop + 18) {
   e.dead = true;
   e.deadTimer = 22;
-  PL.vy = -7; // 踏んだ後に弾む
-  beep(180,'square',0.06,0.18); beep(120,'square',0.08,0.2,0.05);
+  PL.vy = -7;
+  beep(220,'square',0.05,0.18); beep(110,'square',0.07,0.2,0.06);
   burst(e.x, e.y, '#ffdd00', 10);
   score += 50;
   continue;

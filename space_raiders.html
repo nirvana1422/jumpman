@@ -106,7 +106,6 @@ function startGame(){
 
 function initGame(){
   const pw=Math.min(W,480)*0.07;
-  // 移動速度を減速：W*0.0015（以前は W*0.007）
   pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.0015,color:'#00ffcc'};
   buls=[];ebuls=[];parts=[];items=[];
   sTm=0;esTm=0;iTm=260;inv=false;invT=0;spd=false;spdT=0;
@@ -150,17 +149,13 @@ function update(dt){
 
   // --- インベーダー風：時間間隔で一歩ずつ移動 ---
   eMoveTimer += dt;
-  // 基本移動間隔（ms）。レベルが上がると速くなる（ただし最短120ms）
   const moveInterval = Math.max(120, 700 - (level-1) * 40);
   if(eMoveTimer >= moveInterval){
     eMoveTimer = 0;
-    // 1ステップの横移動量／下がる量（ピクセル）
     const stepX = Math.max(6, W * 0.03);
     const stepY = Math.max(8, H * 0.03);
-
     const nextMinX = minX + eDir * stepX;
     const nextMaxX = maxX + eDir * stepX;
-
     if(nextMaxX >= W - 12 || nextMinX <= 12){
       alive.forEach(e => e.y += stepY);
       eDir *= -1;
@@ -195,7 +190,7 @@ function update(dt){
     });
   });
 
-  // --- 追加：自機弾とバリアの衝突判定（バリアで弾を消す） ---
+  // 自機弾とバリアの衝突判定（バリアで弾を消す）
   buls.forEach(b=>{
     if(b.dead) return;
     bars.forEach(br=>{
@@ -206,11 +201,10 @@ function update(dt){
         b.y > br.y &&
         b.y < br.y + br.h
       ){
-        b.dead = true; // 弾を消す（バリア自体は削らない）
+        b.dead = true;
       }
     });
   });
-  // --- ここまでバリア判定 ---
 
   buls=buls.filter(b=>!b.dead);
 
@@ -227,7 +221,23 @@ function update(dt){
 function nextLv(){level++;bgT=Math.min(level-1,BGT.length-1);updUI();showLB();snd.lvlup();startMusic(level);spawnEnemies();}
 function checkLv(){const nl=Math.floor(kills/KPL)+1;if(nl>level){level=nl;bgT=Math.min(level-1,BGT.length-1);showLB();snd.lvlup();startMusic(level);enems.filter(e=>e.alive).forEach(e=>e.sp=0.55+(level-1)*0.22);updUI();}}
 function loseLv(){lives--;snd.hit();spawnFx(pl.x,pl.y,'#ff4466',22);updUI();if(lives<=0)gameOver();else{inv=true;invT=100;}}
-function applyItem(tp){if(tp==='life'){lives=Math.min(lives+1,5);showN('♥ ライフ +1!');updUI();}else if(tp==='speed'){spd=true;spdT=600;showN('⚡ 攻撃速度2倍!');}else{inv=true;invT=500;showN('★ 無敵モード！');}}
+function applyItem(tp){
+  if(tp==='life'){
+    lives=Math.min(lives+1,5);
+    showN('♥ ライフ +1!');
+    updUI();
+  }else if(tp==='speed'){
+    spd=true;
+    // 変更：攻撃速度2倍の効果時間を延長（単位 ms）。以前は 600。
+    spdT=8000;
+    showN('⚡ 攻撃速度2倍! (持続約8秒)');
+  }else{
+    inv=true;
+    // 変更：無敵モードの効果時間を延長（単位 ms）。以前は 500。
+    invT=8000;
+    showN('★ 無敵モード！ (持続約8秒)');
+  }
+}
 function spawnFx(x,y,col,n=12){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=Math.random()*4+1;parts.push({x,y,col,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:20+Math.random()*20,ml:40,r:Math.random()*3+1});}}
 function gameOver(){gs='gameover';stopMusic();const ol=document.getElementById('ov');ol.style.display='flex';ol.innerHTML=`<h1 style="color:#ff4466;text-shadow:0 0 20px #ff4466">GAME<br>OVER</h1><p style="color:#fff;font-size:10px">SCORE <span style="color:#00ffcc">${score}</span></p><p style="color:#888;font-size:7px">LEVEL ${level}</p><button class="btn" style="color:#ff4466" onclick="startGame()">▶ RETRY</button>`;}
 function updUI(){document.getElementById('sV').textContent=score;document.getElementById('lV').textContent=level;document.getElementById('liV').textContent='♥'.repeat(lives)+'♡'.repeat(Math.max(0,3-lives));}

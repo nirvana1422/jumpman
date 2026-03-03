@@ -34,12 +34,12 @@
   }
   #logo{
     position:absolute;top:18px;left:50%;transform:translateX(-50%);pointer-events:none;
-    display:flex;align-items:center;gap:10px;font-weight:900;color:#ffd78a;text-shadow:0 6px 18px rgba(255,160,80,0.06);
+    display:flex;align-items:center;gap:10px;font-weight:900;color:#ffd78a;
   }
   #logo .mark{width:40px;height:40px;border-radius:9px;background:linear-gradient(135deg,#9b6bff,#ff9a5a);display:flex;align-items:center;justify-content:center;color:#140916;font-weight:900;font-size:18px;box-shadow:0 10px 30px rgba(155,107,255,0.12);}
   .title-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
   .title-card{width:360px;padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(6,4,12,0.9),rgba(12,6,12,0.96));box-shadow:0 22px 70px rgba(0,0,0,0.6);text-align:center;border:1px solid rgba(255,255,255,0.02);}
-  .title-card h1{margin-bottom:6px;font-size:30px;color:#ffd78a;letter-spacing:2px;}
+  .title-card h1{margin-bottom:6px;font-size:28px;color:#ffd78a;letter-spacing:2px;}
   .title-card p{color:#e9d4b8;font-size:13px;margin:6px 0;}
   .title-card .note{font-size:12px;color:#ffd78a;margin-top:6px;font-weight:700}
   .start-pulse{margin-top:10px;font-weight:800;color:#140916;background:linear-gradient(90deg,#ffd78a,#ff9a5a);padding:8px 12px;border-radius:8px;display:inline-block;box-shadow:0 10px 30px rgba(255,150,80,0.14);pointer-events:auto;cursor:pointer;}
@@ -55,25 +55,24 @@
 </div>
 
 <canvas id="canvas" width="360" height="480"></canvas>
-
 <div id="msg">タップでジャンプ！（2段で天井へ）</div>
 
 <div class="title-overlay" id="titleOverlay">
-  <div class="title-card" id="titleCard">
+  <div class="title-card">
     <h1>JUMP MAN 2</h1>
-    <p>地上は速く、ジャンプ中は横移動がゆっくりに。</p>
-    <div class="note">地上速度: 速め / 空中横: 遅め（慣性あり）</div>
+    <p>【変更点】</p>
+    <div class="note">
+      🏃 地上の横移動: <span style="color:#ff9a5a">速い（7.0）</span><br>
+      🦅 ジャンプ中の横移動: <span style="color:#88ccff">遅い（2.2）</span><br>
+      ジャンプ時に横速度を固定することで<br>地上と空中でハッキリ差がつきます！
+    </div>
     <div class="start-pulse" id="startPulse">TAP TO START</div>
   </div>
 </div>
 
 <script>
-/* オーディオ */
 var _AC=null;function ac(){if(!_AC)_AC=new(window.AudioContext||window.webkitAudioContext)();return _AC;}
 function tone(f,type,dur,vol,t0){vol=vol||0.1;t0=t0||0;try{var a=ac(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type=type;o.frequency.value=f;var s=a.currentTime+t0;g.gain.setValueAtTime(vol,s);g.gain.exponentialRampToValueAtTime(0.001,s+dur);o.start(s);o.stop(s+dur+0.05);}catch(e){}}
-function kick(t0,freq,dec){freq=freq||160;dec=dec||0.12;try{var a=ac(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';var s=a.currentTime+t0;o.frequency.setValueAtTime(freq,s);o.frequency.exponentialRampToValueAtTime(30,s+dec);g.gain.setValueAtTime(0.32,s);g.gain.exponentialRampToValueAtTime(0.001,s+dec+0.05);o.start(s);o.stop(s+dec+0.1);}catch(e){}}
-function hat(t0,vol){vol=vol||0.04;try{var a=ac(),buf=a.createBuffer(1,Math.floor(a.sampleRate*0.04),a.sampleRate);var d=buf.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);var src=a.createBufferSource(),g=a.createGain(),flt=a.createBiquadFilter();flt.type='highpass';flt.frequency.value=7000;src.buffer=buf;src.connect(flt);flt.connect(g);g.connect(a.destination);g.gain.setValueAtTime(vol,a.currentTime+t0);src.start(a.currentTime+t0);}catch(e){}}
-function snare(t0){try{var a=ac(),buf=a.createBuffer(1,Math.floor(a.sampleRate*0.15),a.sampleRate);var d=buf.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5);var src=a.createBufferSource(),g=a.createGain(),flt=a.createBiquadFilter();flt.type='bandpass';flt.frequency.value=2000;flt.Q.value=0.5;src.buffer=buf;src.connect(flt);flt.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.18,a.currentTime+t0);src.start(a.currentTime+t0);}catch(e){}}
 var seJump=function(){tone(380,'square',0.1,0.13);tone(570,'square',0.08,0.1,0.09);};
 var seJump2=function(){tone(480,'square',0.1,0.12);tone(720,'square',0.08,0.1,0.09);};
 var seJump3=function(){tone(650,'square',0.1,0.14);tone(970,'square',0.08,0.11,0.09);};
@@ -83,22 +82,18 @@ var seLife=function(){[523,659,784,1047].forEach(function(f,i){tone(f,'square',0
 var seSpeed=function(){[300,400,500,600].forEach(function(f,i){tone(f,'sawtooth',0.08,0.11,i*0.06);});};
 var seTriple=function(){[400,600,800,1050].forEach(function(f,i){tone(f,'square',0.09,0.13,i*0.07);});};
 
-/* ゲーム本体 */
 var canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
 var W=canvas.width,H=canvas.height,GND=H-60;
 var state='title',score=0,lives=3,hiScore=0,frame=0,lastLevel=0;
 
+// ★核心：地上速度と空中速度を完全に分離
+var GROUND_SPEED = 7.0;   // 地上の横速度（速い）
+var AIR_SPEED    = 2.2;   // 空中の横速度（遅い・固定）
+
 var P={
   x:W/2,y:GND,vy:0,w:28,h:36,dir:1,
-  baseSpeed:6.2,        // ★地上の基本速度を速く（元の4.6より上げた）
   onGround:true,jumpsLeft:2,invincible:0,speedTimer:0,tripleTimer:0,
   vx:0,
-  airHorzFactor:0.32,   // ★空中横速度倍率（低いほどジャンプ中が遅い）
-  interp:0.10,          // 補間量（慣性の強さ、小さいほど遅れて動く）
-  get effectiveSpeed(){
-    var base = (this.speedTimer>0) ? 7.8 : this.baseSpeed;
-    return this.onGround ? base : base * this.airHorzFactor;
-  },
   get currentMaxJumps(){return this.tripleTimer>0?3:2;}
 };
 
@@ -136,23 +131,14 @@ function drawBG(){
 function drawAfterImages(){
   for(var i=afterImages.length-1;i>=0;i--){
     var a=afterImages[i],t=a.life/a.maxLife;
-    ctx.save();
-    ctx.globalAlpha = 0.10 + 0.5 * t;
+    ctx.save();ctx.globalAlpha=0.10+0.5*t;
     if(a.dir===-1){ctx.translate(a.x,0);ctx.scale(-1,1);ctx.translate(-a.x,0);}
-    var x = a.x - P.w/2, y = a.y - P.h;
-    var scale = 1 - (1 - t) * 0.18;
-    ctx.translate(x + P.w/2, y + P.h/2);
-    ctx.scale(scale, scale);
-    ctx.translate(-(x + P.w/2), -(y + P.h/2));
-    ctx.fillStyle = 'rgba(155,107,255,0.92)';
-    ctx.fillRect(x+4,y+14,P.w-8,P.h-14);
-    ctx.fillStyle = 'rgba(255,154,90,0.9)';
-    ctx.fillRect(x+2,y+14,P.w-4,P.h-22);
-    ctx.fillStyle = 'rgba(255,210,160,0.85)';
-    ctx.fillRect(x+6,y,P.w-12,14);
+    var x=a.x-P.w/2,y=a.y-P.h;
+    ctx.fillStyle='rgba(155,107,255,0.92)';ctx.fillRect(x+4,y+14,P.w-8,P.h-14);
+    ctx.fillStyle='rgba(255,154,90,0.9)';ctx.fillRect(x+2,y+14,P.w-4,P.h-22);
+    ctx.fillStyle='rgba(255,210,160,0.85)';ctx.fillRect(x+6,y,P.w-12,14);
     ctx.restore();
-    a.life--;
-    if(a.life<=0) afterImages.splice(i,1);
+    a.life--;if(a.life<=0)afterImages.splice(i,1);
   }
 }
 
@@ -225,7 +211,7 @@ function updateHUD(){document.getElementById('lives').textContent='❤️'.repea
 function resetGame(){
   P.x=W/2;P.y=GND;P.vy=0;P.dir=1;P.onGround=true;P.jumpsLeft=2;P.invincible=0;P.speedTimer=0;P.tripleTimer=0;P.vx=0;
   enemies=[];items=[];particles=[];lavaParticles=[];afterImages=[];score=0;lives=3;frame=0;combo=0;comboTimer=0;spawnT=0;spawnI=115;itemT=0;itemI=420;
-  lastLevel=0;levelUpTimer=0;bgmLevel=-1;state='play';updateHUD();
+  lastLevel=0;levelUpTimer=0;state='play';updateHUD();
 }
 
 function doJump(){
@@ -233,8 +219,11 @@ function doJump(){
   if(state==='play'&&P.jumpsLeft>0){
     var n=P.currentMaxJumps-P.jumpsLeft;
     if(n===0)seJump();else if(n===1)seJump2();else seJump3();
-    P.vy = (n===0) ? -16 : (n===1 ? -14 : -13);
+    P.vy=(n===0)?-16:(n===1?-14:-13);
     P.jumpsLeft--;P.onGround=false;
+    // ★ジャンプ時に横速度を空中用の遅い速度に固定する
+    var airSpd = (P.speedTimer>0) ? AIR_SPEED*1.4 : AIR_SPEED;
+    P.vx = airSpd * P.dir;
     afterImages.push({x:P.x,y:P.y,dir:P.dir,life:14,maxLife:14});
   }
 }
@@ -249,51 +238,58 @@ function update(){
   var lv=getLevel();
   if(lv!==lastLevel){lastLevel=lv;levelUpTimer=90;}
 
-  // ★横移動：地上は速く、空中は遅い目標速度に慣性で近づく
-  var target = P.effectiveSpeed * P.dir;
-  P.vx += (target - P.vx) * P.interp;
+  if(P.onGround){
+    // ★地上：速い速度で直接移動
+    var gndSpd = (P.speedTimer>0) ? GROUND_SPEED*1.4 : GROUND_SPEED;
+    P.vx = gndSpd * P.dir;
+  }
+  // 空中：ジャンプ時に固定したvxをそのまま使う（補間なし）
+
   P.x += P.vx;
 
   // 画面端で反転
-  if(P.x > W - P.w/2){ P.x = W - P.w/2; P.dir = -1; P.vx = -Math.abs(P.vx)*0.5; }
-  if(P.x < P.w/2){ P.x = P.w/2; P.dir = 1; P.vx = Math.abs(P.vx)*0.5; }
+  if(P.x > W-P.w/2){
+    P.x = W-P.w/2; P.dir=-1;
+    // 反転時にvxも反転（空中でも即座に向きを変える）
+    P.vx = -Math.abs(P.vx);
+  }
+  if(P.x < P.w/2){
+    P.x = P.w/2; P.dir=1;
+    P.vx = Math.abs(P.vx);
+  }
 
-  P.vy += 0.5; P.y += P.vy;
-  if(P.y >= GND){
-    P.y = GND; P.vy = 0; P.onGround = true; P.jumpsLeft = P.currentMaxJumps;
-    // ★着地時に横速度をリセットして地上速度に素早く切り替わるようにする
-    P.vx *= 0.6;
+  P.vy+=0.5;P.y+=P.vy;
+  if(P.y>=GND){
+    P.y=GND;P.vy=0;P.onGround=true;P.jumpsLeft=P.currentMaxJumps;
   } else {
-    P.onGround = false;
+    P.onGround=false;
   }
 
   if(P.invincible>0)P.invincible--;if(P.speedTimer>0)P.speedTimer--;
   if(P.tripleTimer>0){P.tripleTimer--;if(P.tripleTimer===0&&P.jumpsLeft>2)P.jumpsLeft=2;}
   if(comboTimer>0)comboTimer--;else combo=0;
 
-  if(!P.onGround && P.vy < 0 && frame % 3 === 0){ afterImages.push({x:P.x,y:P.y,dir:P.dir,life:12,maxLife:12}); if(afterImages.length>18) afterImages.shift(); }
+  if(!P.onGround&&P.vy<0&&frame%3===0){afterImages.push({x:P.x,y:P.y,dir:P.dir,life:12,maxLife:12});if(afterImages.length>18)afterImages.shift();}
 
-  var cfg = LVLS[getLevel()];
+  var cfg=LVLS[getLevel()];
   if(spawnI>cfg[0])spawnI=Math.max(cfg[0],spawnI-1.8);else if(spawnI<cfg[0])spawnI=Math.min(cfg[0],spawnI+0.8);
-  if(++spawnT >= Math.round(spawnI)){ enemies.push({x:Math.random()*(W-60)+30,y:-24,w:28,h:28,vy:cfg[1]+Math.random()*0.9,alive:true,dead:false,deadTimer:0,type:Math.random()<cfg[2]?'fast':'normal'}); spawnT=0; }
-  if(++itemT >= itemI){ var types=['life','life','speed','triple']; items.push({x:Math.random()*(W-60)+30,y:-24,vy:1.8,alive:true,type:types[Math.floor(Math.random()*types.length)]}); itemT=0; itemI=Math.max(300,itemI-5); }
-  items.forEach(function(item){ if(!item.alive) return; item.y+=item.vy; if(item.y>=GND){ item.alive=false; return; } if(hitCheck(item.x-14,item.y-14,28,28,P.x-P.w/2,P.y-P.h,P.w,P.h)){ item.alive=false; if(item.type==='life'){ lives=Math.min(lives+1,9); seLife(); burst(item.x,item.y,'#ffb3b3',14); } else if(item.type==='speed'){ P.speedTimer=360; seSpeed(); burst(item.x,item.y,'#ffd78a',14); } else if(item.type==='triple'){ P.tripleTimer=360; seTriple(); if(P.onGround) P.jumpsLeft=3; burst(item.x,item.y,'#ff9a5a',14); } updateHUD(); }});
-  items = items.filter(function(i){return i.alive;});
-  enemies.forEach(function(e){ if(e.dead){ if(++e.deadTimer>20) e.alive=false; return; } e.y+=e.vy; if(e.y>=GND){ e.alive=false; seGnd(); if(P.invincible===0){ lives--; P.invincible=100; burst(e.x,GND-12,'#ffb3b3',8); updateHUD(); if(lives<=0){ state='gameover'; if(score>hiScore) hiScore=score; } } return; } if(hitCheck(e.x-e.w/2,e.y-e.h,e.w,e.h,P.x-P.w/2,P.y-P.h,P.w,P.h)){ e.dead=true; combo++; comboTimer=90; score+=(e.type==='fast'?200:100)*combo; if(score>hiScore) hiScore=score; seKill(); burst(e.x,e.y-e.h/2,'#ffd78a',12); updateHUD(); } });
-  enemies = enemies.filter(function(e){return e.alive;});
+  if(++spawnT>=Math.round(spawnI)){enemies.push({x:Math.random()*(W-60)+30,y:-24,w:28,h:28,vy:cfg[1]+Math.random()*0.9,alive:true,dead:false,deadTimer:0,type:Math.random()<cfg[2]?'fast':'normal'});spawnT=0;}
+  if(++itemT>=itemI){var types=['life','life','speed','triple'];items.push({x:Math.random()*(W-60)+30,y:-24,vy:1.8,alive:true,type:types[Math.floor(Math.random()*types.length)]});itemT=0;itemI=Math.max(300,itemI-5);}
+
+  items.forEach(function(item){if(!item.alive)return;item.y+=item.vy;if(item.y>=GND){item.alive=false;return;}if(hitCheck(item.x-14,item.y-14,28,28,P.x-P.w/2,P.y-P.h,P.w,P.h)){item.alive=false;if(item.type==='life'){lives=Math.min(lives+1,9);seLife();burst(item.x,item.y,'#ffb3b3',14);}else if(item.type==='speed'){P.speedTimer=360;seSpeed();burst(item.x,item.y,'#ffd78a',14);}else if(item.type==='triple'){P.tripleTimer=360;seTriple();if(P.onGround)P.jumpsLeft=3;burst(item.x,item.y,'#ff9a5a',14);}updateHUD();}});
+  items=items.filter(function(i){return i.alive;});
+
+  enemies.forEach(function(e){if(e.dead){if(++e.deadTimer>20)e.alive=false;return;}e.y+=e.vy;if(e.y>=GND){e.alive=false;seGnd();if(P.invincible===0){lives--;P.invincible=100;burst(e.x,GND-12,'#ffb3b3',8);updateHUD();if(lives<=0){state='gameover';if(score>hiScore)hiScore=score;}}return;}if(hitCheck(e.x-e.w/2,e.y-e.h,e.w,e.h,P.x-P.w/2,P.y-P.h,P.w,P.h)){e.dead=true;combo++;comboTimer=90;score+=(e.type==='fast'?200:100)*combo;if(score>hiScore)hiScore=score;seKill();burst(e.x,e.y-e.h/2,'#ffd78a',12);updateHUD();}});
+  enemies=enemies.filter(function(e){return e.alive;});
   if(frame%1600===0){score+=50;if(score>hiScore)hiScore=score;updateHUD();}
 }
 
 function draw(){
-  if(state==='title'){ drawBG(); ctx.fillStyle='rgba(0,0,0,0.42)';ctx.fillRect(0,0,W,H); return; }
+  if(state==='title'){drawBG();ctx.fillStyle='rgba(0,0,0,0.42)';ctx.fillRect(0,0,W,H);return;}
   drawBG();
-  items.forEach(function(it){ if(it.alive) drawItem(it); });
-  enemies.forEach(function(e){ drawEnemy(e); });
-  drawAfterImages();
-  drawPlayer();
-  drawParticles();
-  drawHUD();
-  drawLevelUp();
+  items.forEach(function(it){if(it.alive)drawItem(it);});
+  enemies.forEach(function(e){drawEnemy(e);});
+  drawAfterImages();drawPlayer();drawParticles();drawHUD();drawLevelUp();
   if(state==='gameover'){
     ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
     ctx.fillStyle='#ff9a5a';ctx.shadowColor='#ff9a5a';ctx.shadowBlur=16;
@@ -305,11 +301,11 @@ function draw(){
     if(Math.floor(frame/30)%2===0){ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.fillText('TAP TO RETRY',W/2,H/2+74);}
     ctx.textAlign='left';
   }
-  document.getElementById('msg').style.display = state==='play' ? 'none' : 'block';
+  document.getElementById('msg').style.display=state==='play'?'none':'block';
 }
 
-function loop(){ update(); draw(); requestAnimationFrame(loop); }
-P.y=GND; loop();
+function loop(){update();draw();requestAnimationFrame(loop);}
+P.y=GND;loop();
 </script>
 </body>
 </html>

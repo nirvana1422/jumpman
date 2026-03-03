@@ -98,10 +98,10 @@ var particles = [];
 // ============================================================
 var PL = { x:W/2, y:H*0.7, w:24, h:30, vy:0, vx:2.4, held:false, animT:0 };
 var GRAVITY  = 0.28;
-var LIFT_VY  = -9.0;   // タップ中の目標vy
-var LIFT_K   = 0.28;   // 追従係数
+var LIFT_VY  = -9.0;
+var LIFT_K   = 0.28;
 var MAX_FALL = 14;
-var WALL_THICK = 22;   // 壁の厚さ（十分厚くして確実に止まる）
+var WALL_THICK = 22;
 
 // ============================================================
 // WALLS / ENEMIES / ITEMS
@@ -111,30 +111,19 @@ var enemies = [], enemyTimer = 0;
 var items = [], itemTimer = 200;
 
 function wallSpeed() { return 1.3 + lvl * 0.5 + score * 0.00010; }
-function wallGap()   { return Math.max(50, 100 - lvl * 8); }   // 壁の出現間隔
+function wallGap()   { return Math.max(50, 100 - lvl * 8); }
 
-function getLevel() {
-if (score >= 5000) return 4;
-if (score >= 2500) return 3;
-if (score >= 1000) return 2;
-if (score >= 400)  return 1;
-return 0;
-}
-
-// 壁の「ふさがっている区間」リスト segs:[{x,w}]
 function makeWallSegs() {
 var segs = [];
 var r = Math.random();
 
 if (r < 0.30) {
-// 穴ひとつ
 var gw = 85 + Math.random() * 65;
 var gx = 10 + Math.random() * (W - 20 - gw);
 if (gx > 0)      segs.push({x:0,        w:gx});
 if (gx+gw < W)   segs.push({x:gx+gw,    w:W-(gx+gw)});
 
 } else if (r < 0.55) {
-// 穴ふたつ
 var g1w = 65 + Math.random() * 35;
 var g1x = 8  + Math.random() * 50;
 var gap = 18 + Math.random() * 30;
@@ -147,23 +136,19 @@ if (gap > 0)            segs.push({x:g1x+g1w, w:gap});
 if (g2x+g2w < W)       segs.push({x:g2x+g2w, w:W-(g2x+g2w)});
 
 } else if (r < 0.68) {
-// 左端だけ壁
 segs.push({x:0, w:12 + Math.random()*40});
 
 } else if (r < 0.80) {
-// 右端だけ壁
 var sw = 12 + Math.random()*40;
 segs.push({x:W-sw, w:sw});
 
 } else if (r < 0.90) {
-// 中央に柱
 var cw = 35 + Math.random()*70;
 var cx = (W-cw)/2 + (Math.random()-0.5)*50;
 cx = Math.max(50, Math.min(W-50-cw, cx));
 segs.push({x:cx, w:cw});
 
 } else {
-// 広い穴（簡単）
 var gw2 = 140 + Math.random()*80;
 if (gw2 > W-20) gw2 = W-20;
 var gx2 = 10 + Math.random()*(W-20-gw2);
@@ -174,7 +159,6 @@ if (gx2+gw2 < W)  segs.push({x:gx2+gw2, w:W-(gx2+gw2)});
 return segs;
 }
 
-// プレイヤーXが壁segsに当たるか
 function hitsWall(segs, px, pw) {
 if (phaseF > 0) return false;
 var pl = px - pw/2 + 4;
@@ -193,8 +177,7 @@ x:x, y:-30, w:22, h:22,
 bx:x, range:35+Math.random()*70,
 dir:Math.random()<0.5?1:-1,
 spd:0.8+Math.random()*1.2+lvl*0.3,
-animT:Math.random()*60|0,
-dead:false, deadTimer:0
+animT:Math.random()*60|0
 });
 }
 
@@ -245,7 +228,6 @@ function update() {
 frame++;
 if (STATE !== ‘play’) return;
 
-// レベル
 lvl = getLevel();
 if (lvl !== lastLvl && lastLvl >= 0) {
 lvlFlash = 90; playLevel();
@@ -253,47 +235,37 @@ try { playBGM(lvl); } catch(e) {}
 }
 lastLvl = lvl;
 
-// 左右移動
 PL.x += PL.vx;
 if (PL.x < PL.w/2)   { PL.x = PL.w/2;   PL.vx =  Math.abs(PL.vx); }
 if (PL.x > W-PL.w/2) { PL.x = W-PL.w/2; PL.vx = -Math.abs(PL.vx); }
 var baseVX = 2.4 + lvl*0.2;
 PL.vx = PL.vx > 0 ? baseVX : -baseVX;
 
-// 縦の加速度計算
 if (PL.held) {
 PL.vy += (LIFT_VY - PL.vy) * LIFT_K;
 } else {
 PL.vy = Math.min(PL.vy + GRAVITY, MAX_FALL);
 }
 
-// 壁移動（先に動かす）
 var ws = wallSpeed();
 for (var i=0; i<walls.length; i++) walls[i].y += ws;
 for (var i=0; i<enemies.length; i++) { enemies[i].y += ws; }
 for (var i=0; i<items.length; i++)   { items[i].y += ws; }
 
-// ─────────────────────────────────────────────────────
-// プレイヤーY移動：1px刻みで進んで壁に当たったら止まる
-// ─────────────────────────────────────────────────────
 var remaining = PL.vy;
 var STEP = 1.5;
-var moved = 0;
 var maxIter = Math.ceil(Math.abs(PL.vy) / STEP) + 2;
 
 for (var iter = 0; iter < maxIter && Math.abs(remaining) > 0.01; iter++) {
 var dy = remaining > 0 ? Math.min(remaining, STEP) : Math.max(remaining, -STEP);
 PL.y += dy;
 remaining -= dy;
-moved += dy;
 
 ```
-// 画面上端
 if (PL.y < PL.h/2) { PL.y = PL.h/2; PL.vy = 0; remaining = 0; break; }
 
-if (phaseF > 0) continue; // すり抜け中はコリジョンスキップ
+if (phaseF > 0) continue;
 
-// 各壁との衝突
 var hit = false;
 for (var wi=0; wi<walls.length; wi++) {
   var w = walls[wi];
@@ -302,20 +274,14 @@ for (var wi=0; wi<walls.length; wi++) {
   var pTop = PL.y - PL.h/2;
   var pBot = PL.y + PL.h/2;
 
-  // Y重なりチェック
   if (pBot <= wTop || pTop >= wBot) continue;
-
-  // X方向の壁当たりチェック
   if (!hitsWall(w.segs, PL.x, PL.w)) continue;
 
-  // 当たった！
   if (dy > 0) {
-    // 下降中 → 壁の上に押し付け、壁と一緒に流れる
     PL.y = wTop - PL.h/2;
     PL.vy = ws;
     remaining = 0;
   } else {
-    // 上昇中 → 天井に押し付け
     PL.y = wBot + PL.h/2;
     PL.vy = 0;
     remaining = 0;
@@ -328,7 +294,6 @@ if (hit) break;
 
 }
 
-// 画面下端
 if (PL.y > H + 40) { doGameOver(); return; }
 
 PL.animT++;
@@ -339,62 +304,53 @@ if (invF   > 0) invF–;
 if (phaseF > 0) phaseF–;
 if (lvlFlash>0) lvlFlash–;
 
-// 壁スポーン
 wallTimer++;
 if (wallTimer >= wallGap()) {
 wallTimer = 0;
 walls.push({ y:-WALL_THICK, segs:makeWallSegs() });
 }
 
-// 敵スポーン
 enemyTimer++;
 var eInt = Math.max(35, 70 - lvl*7);
 if (enemyTimer >= eInt) {
 enemyTimer = 0;
 spawnEnemy();
-if (Math.random() < 0.5) spawnEnemy(); // 50%で2体
-if (lvl >= 3 && Math.random() < 0.3) spawnEnemy(); // LV3+で3体目も
+if (Math.random() < 0.5) spawnEnemy();
+if (lvl >= 3 && Math.random() < 0.3) spawnEnemy();
 }
 
-// 敵移動
 for (var i=0; i<enemies.length; i++) {
 var e = enemies[i];
-if (e.dead) continue;
 e.x += e.dir * e.spd;
 if (e.x > e.bx + e.range) e.dir = -1;
 if (e.x < e.bx - e.range) e.dir =  1;
 e.animT++;
 }
 
-// アイテムスポーン
 itemTimer–;
 if (itemTimer <= 0) { itemTimer = 160+Math.random()*100|0; spawnItem(); }
 
-// アイテム移動
 for (var i=0; i<items.length; i++) { items[i].tw += 0.07; }
 
-// 敵当たり判定（踏みつけ or ダメージ）
 for (var i=enemies.length-1; i>=0; i–) {
 var e = enemies[i];
 if (e.dead) continue;
 
 ```
 var edx = Math.abs(e.x - PL.x);
-var pBot = PL.y + PL.h/2;
+var pBot2 = PL.y + PL.h/2;
 var eTop = e.y - e.h/2;
 
-// 踏みつけ判定：下降中 & プレイヤー下端が敵の上端付近
-if (edx < 18 && PL.vy > 0 && pBot >= eTop - 4 && pBot <= eTop + 18) {
+if (edx < 18 && PL.vy > 0 && pBot2 >= eTop - 4 && pBot2 <= eTop + 18) {
   e.dead = true;
   e.deadTimer = 22;
   PL.vy = -7;
-  beep(220,'square',0.05,0.18); beep(110,'square',0.07,0.2,0.06);
+  beep(180,'square',0.06,0.18); beep(120,'square',0.08,0.2,0.05);
   burst(e.x, e.y, '#ffdd00', 10);
   score += 50;
   continue;
 }
 
-// 通常ダメージ
 if (invF === 0 && edx < 20 && Math.abs(PL.y - e.y) < 24) {
   lives--; invF=160; playHit(); burst(PL.x, PL.y, '#ff4466', 12);
   if (lives <= 0) { doGameOver(); return; }
@@ -402,7 +358,7 @@ if (invF === 0 && edx < 20 && Math.abs(PL.y - e.y) < 24) {
 ```
 
 }
-// 潰れタイマー管理・削除
+
 for (var i=enemies.length-1; i>=0; i–) {
 if (enemies[i].dead) {
 enemies[i].deadTimer–;
@@ -410,7 +366,6 @@ if (enemies[i].deadTimer <= 0) enemies.splice(i, 1);
 }
 }
 
-// アイテム取得
 for (var i=items.length-1; i>=0; i–) {
 var it = items[i];
 if (Math.abs(it.x-PL.x)<22 && Math.abs(it.y-PL.y)<24) {
@@ -422,10 +377,10 @@ items.splice(i,1);
 }
 }
 
-// クリーンアップ
 walls   = walls.filter(function(w){ return w.y < H+40; });
 enemies = enemies.filter(function(e){ return e.y < H+40; });
 items   = items.filter(function(it){ return it.y < H+40; });
+
 for (var i=particles.length-1; i>=0; i–) {
 var p=particles[i];
 p.x+=p.vx; p.y+=p.vy; p.vy+=0.2; p.life–;
@@ -433,6 +388,14 @@ if (p.life<=0) particles.splice(i,1);
 }
 
 if (score > best) best = score;
+}
+
+function getLevel() {
+if (score >= 5000) return 4;
+if (score >= 2500) return 3;
+if (score >= 1000) return 2;
+if (score >= 400)  return 1;
+return 0;
 }
 
 function doGameOver() {
@@ -449,35 +412,26 @@ sc = sc||1;
 ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
 var bob = Math.sin(animT*0.18)*2;
 
-// スカート
 ctx.fillStyle = phaseF>0 ? ‘rgba(100,200,255,0.75)’ : ‘#cc4488’;
 ctx.beginPath(); ctx.moveTo(-12,2+bob); ctx.lineTo(12,2+bob); ctx.lineTo(16,16+bob); ctx.lineTo(-16,16+bob); ctx.closePath(); ctx.fill();
-// 胴体
 ctx.fillStyle = phaseF>0 ? ‘rgba(80,180,255,0.8)’ : ‘#dd6699’;
 ctx.beginPath(); ctx.ellipse(0,-4+bob,9,9,0,0,Math.PI*2); ctx.fill();
-// 頭
 ctx.fillStyle = ‘#ffcc88’;
 ctx.beginPath(); ctx.arc(0,-16+bob,10,0,Math.PI*2); ctx.fill();
-// パーマ
 ctx.fillStyle = ‘#eeeeee’;
 [[-6,-23],[0,-25],[6,-23],[-4,-21],[4,-21]].forEach(function(p){ ctx.beginPath(); ctx.arc(p[0],p[1]+bob,5,Math.PI,0); ctx.fill(); });
-// 目
 ctx.fillStyle=’#333’;
 ctx.beginPath(); ctx.arc(-3.5,-16+bob,1.8,0,Math.PI*2); ctx.fill();
 ctx.beginPath(); ctx.arc(3.5,-16+bob,1.8,0,Math.PI*2); ctx.fill();
-// 頬
 ctx.fillStyle=‘rgba(255,120,120,0.5)’;
 ctx.beginPath(); ctx.arc(-6,-13+bob,3.5,0,Math.PI*2); ctx.fill();
 ctx.beginPath(); ctx.arc(6,-13+bob,3.5,0,Math.PI*2); ctx.fill();
-// 腕
 var arm = Math.sin(animT*0.2)*8;
 ctx.fillStyle=’#ffcc88’;
 ctx.beginPath(); ctx.arc(-13,-4+bob+arm*0.4,4.5,0,Math.PI*2); ctx.fill();
 ctx.beginPath(); ctx.arc(13,-4+bob-arm*0.4,4.5,0,Math.PI*2); ctx.fill();
-// バッグ
 ctx.fillStyle=’#7733bb’; ctx.fillRect(10,-2+bob,7,9);
 ctx.strokeStyle=’#fff’; ctx.lineWidth=1; ctx.strokeRect(10,-2+bob,7,9);
-// 足
 var leg = Math.abs(Math.sin(animT*0.22))*5;
 ctx.fillStyle=’#aa7744’;
 ctx.fillRect(-7,14+bob,5,5+(leg>2.5?3:0));
@@ -491,17 +445,14 @@ ctx.restore();
 function drawEnemy(e) {
 ctx.save(); ctx.translate(e.x, e.y);
 
-// 潰れアニメ（踏まれた直後）
 if (e.dead) {
-var prog = 1 - e.deadTimer / 22; // 0→1
-ctx.scale(1 + prog*0.6, 1 - prog*0.75); // 横に広がり縦に潰れる
+var prog = 1 - e.deadTimer / 22;
+ctx.scale(1 + prog*0.6, 1 - prog*0.75);
 ctx.globalAlpha = 1 - prog*0.7;
-// 潰れた体だけ描く
 ctx.fillStyle = ‘#cc2244’;
 ctx.beginPath(); ctx.ellipse(0, 4, 14, 6, 0, 0, Math.PI*2); ctx.fill();
 ctx.fillStyle = ‘#ff8899’;
 ctx.beginPath(); ctx.ellipse(2, 3, 11, 5, 0, 0, Math.PI*2); ctx.fill();
-// ×目
 ctx.strokeStyle = ‘#111’; ctx.lineWidth = 2;
 ctx.beginPath(); ctx.moveTo(-3,-1); ctx.lineTo(1,3); ctx.stroke();
 ctx.beginPath(); ctx.moveTo(1,-1); ctx.lineTo(-3,3); ctx.stroke();
@@ -544,7 +495,6 @@ var th = THEMES[lvl]||THEMES[0];
 
 if (STATE === ‘title’) { drawTitle(); return; }
 
-// 背景
 var gr = ctx.createLinearGradient(0,0,0,H);
 gr.addColorStop(0,th.sky0); gr.addColorStop(1,th.sky1);
 ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
@@ -558,11 +508,10 @@ ctx.fillStyle=’#fff’; ctx.beginPath(); ctx.arc(s.x,(s.y+bgY*0.3)%H,s.r,0,Mat
 ctx.globalAlpha=0.2;
 bgBlds.forEach(function(b){
 ctx.fillStyle=lvl>=2?’#334’:’#4a7a4a’;
-var by=(b.h+bgY*0.4)%H; // スクロール
+var by=(b.h+bgY*0.4)%H;
 ctx.fillRect(b.x-b.w/2,by,b.w,b.h);
 }); ctx.globalAlpha=1;
 
-// 壁描画
 walls.forEach(function(w){
 w.segs.forEach(function(s){
 var g2=ctx.createLinearGradient(0,w.y,0,w.y+WALL_THICK);
@@ -572,7 +521,6 @@ ctx.fillStyle=‘rgba(255,255,255,0.22)’; ctx.fillRect(s.x,w.y,s.w,3);
 ctx.fillStyle=‘rgba(0,0,0,0.1)’;
 for(var bx=s.x;bx<s.x+s.w;bx+=14) ctx.fillRect(bx,w.y,7,WALL_THICK);
 });
-// 穴の縁グロー
 ctx.shadowColor=th.wallH; ctx.shadowBlur=6;
 var prev=0;
 w.segs.forEach(function(s){
@@ -583,7 +531,6 @@ if(prev<W-2){ ctx.fillStyle=th.wallH+‘aa’; ctx.fillRect(prev-2,w.y,2,WALL_TH
 ctx.shadowBlur=0;
 });
 
-// アイテム
 items.forEach(function(it){
 var pulse=1+0.13*Math.sin(it.tw);
 ctx.save(); ctx.translate(it.x,it.y); ctx.scale(pulse,pulse);
@@ -597,10 +544,8 @@ ctx.fillText(it.type===‘life’?‘LIFE’:it.type===‘inv’?‘STAR’:‘P
 ctx.textAlign=‘left’;
 });
 
-// 敵
 enemies.forEach(drawEnemy);
 
-// プレイヤー
 var show = !(invF>0 && Math.floor(frame/5)%2===0);
 if (show) {
 if (invF>0)    { ctx.shadowColor=’#ffdd00’; ctx.shadowBlur=18; }
@@ -609,13 +554,11 @@ drawObachan(PL.x, PL.y, 1, PL.animT);
 ctx.shadowBlur=0;
 }
 
-// パーティクル
 particles.forEach(function(p){
 ctx.globalAlpha=p.life/p.max; ctx.fillStyle=p.col;
 ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
 }); ctx.globalAlpha=1;
 
-// HUD
 drawHUD(th);
 if (STATE===‘over’) drawGameOver(th);
 }

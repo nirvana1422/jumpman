@@ -37,7 +37,7 @@
   </div>
   <div id="ov">
     <h1>SPACE<br>RAIDERS</h1>
-    <p>左タップ/クリック → 左移動<br>右タップ/クリック → 右移動<br>弾は自動発射！<br><br>♥ ライフ回復<br>⚡ 攻撃速度2倍<br>★ 無敵モード</p>
+    <p>スライドでキャラ移動（タッチ/ドラッグ）<br>弾は自動発射！<br><br>♥ ライフ回復<br>⚡ 攻撃速度2倍<br>★ 無敵モード</p>
     <button class="btn" style="color:#00ffcc" id="sBtn">▶ START</button>
   </div>
   <div id="iN"></div>
@@ -93,7 +93,7 @@ const KPL=20;
 let pl,buls,ebuls,enems,bars,items,parts;
 let eDir,sTm,esTm,iTm,eMoveTimer;
 let inv=false,invT=0,spd=false,spdT=0;
-let tL=false,tR=false;
+let targetX = null; // スライドで指示する目標X座標（ローカル座標）
 
 document.getElementById('sBtn').onclick=startGame;
 
@@ -106,10 +106,12 @@ function startGame(){
 
 function initGame(){
   const pw=Math.min(W,480)*0.07;
-  pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.0006,color:'#00ffcc'};
+  // プレイヤー速度係数は残すがスライド制御では位置追従用に使うこともある
+  pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.0015,color:'#00ffcc'};
   buls=[];ebuls=[];parts=[];items=[];
   sTm=0;esTm=0;iTm=260;inv=false;invT=0;spd=false;spdT=0;
   eMoveTimer = 0;
+  targetX = null;
   spawnEnemies();initBars();
 }
 
@@ -117,7 +119,6 @@ function spawnEnemies(){
   enems=[];eDir=1;
   const cols=9,rows=4,ex=W*0.06,ey=H*0.12;
   const gx=(W-ex*2)/cols,gy=H*0.055;
-  const sp=0.55+(level-1)*0.22;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)
     enems.push({x:ex+c*gx+gx/2,y:ey+r*gy,w:W*0.053,h:W*0.038,sp,row:r,alive:true,fr:0,frt:0,
       color:r===0?'#ff4466':r<=2?'#ff9f00':'#00ddff',pts:r===0?30:r<=2?20:10});
@@ -130,9 +131,14 @@ function initBars(){
 }
 
 function update(dt){
-  if(tL)pl.x-=pl.sp*dt;
-  if(tR)pl.x+=pl.sp*dt;
-  pl.x=Math.max(pl.w/2,Math.min(W-pl.w/2,pl.x));
+  // スライド追従（フレームレート依存を緩和）
+  if(targetX !== null){
+    // followFactor: 16ms（約60fps）基準で0.35追従を目安に調整
+    const followFactor = Math.min(1, 0.35 * (dt / 16));
+    pl.x += (targetX - pl.x) * followFactor;
+  }
+  pl.x = Math.max(pl.w/2, Math.min(W-pl.w/2, pl.x));
+
   if(inv){invT-=dt;if(invT<=0){inv=false;showN('');}}
   if(spd){spdT-=dt;if(spdT<=0){spd=false;showN('');}}
 
@@ -147,7 +153,7 @@ function update(dt){
   let minX=Infinity,maxX=-Infinity,maxY=-Infinity;
   alive.forEach(e=>{minX=Math.min(minX,e.x-e.w/2);maxX=Math.max(maxX,e.x+e.w/2);maxY=Math.max(maxY,e.y+e.h/2);});
 
-  // --- インベーダー風：時間間隔で一歩ずつ移動 ---
+  // インベーダー風移動（時間間隔で一歩）
   eMoveTimer += dt;
   const moveInterval = Math.max(120, 700 - (level-1) * 40);
   if(eMoveTimer >= moveInterval){
@@ -164,7 +170,6 @@ function update(dt){
       alive.forEach(e => { e.x += eDir * stepX; e.frt++; if(e.frt > 12){ e.fr = 1 - e.fr; e.frt = 0; } });
     }
   }
-  // --- ここまでインベーダー風移動 ---
 
   if(maxY>=pl.y-pl.h){loseLv();return;}
 
@@ -190,17 +195,12 @@ function update(dt){
     });
   });
 
-  // 自機弾とバリアの衝突判定（バリアで弾を消す）
+  // 自機弾とバリアの衝突（弾がバリアで消える）
   buls.forEach(b=>{
     if(b.dead) return;
     bars.forEach(br=>{
       if(br.hp<=0) return;
-      if(
-        b.x > br.x &&
-        b.x < br.x + br.w &&
-        b.y > br.y &&
-        b.y < br.y + br.h
-      ){
+      if(b.x > br.x && b.x < br.x + br.w && b.y > br.y && b.y < br.y + br.h){
         b.dead = true;
       }
     });
@@ -228,13 +228,11 @@ function applyItem(tp){
     updUI();
   }else if(tp==='speed'){
     spd=true;
-    // 変更：攻撃速度2倍の効果時間を延長（単位 ms）。以前は 600。
-    spdT=8000;
+    spdT=8000; // 攻撃速度2倍の持続を延長（ms）
     showN('⚡ 攻撃速度2倍! (持続約8秒)');
   }else{
     inv=true;
-    // 変更：無敵モードの効果時間を延長（単位 ms）。以前は 500。
-    invT=8000;
+    invT=8000; // 無敵の持続を延長（ms）
     showN('★ 無敵モード！ (持続約8秒)');
   }
 }
@@ -296,14 +294,24 @@ function draw(){
 let lastT=0;
 function loop(ts=0){if(gs!=='playing')return;const dt=Math.min(ts-lastT,32);lastT=ts;update(dt);draw();requestAnimationFrame(loop);}
 
-// Input
-function getLeft(clientX){return clientX<gw.getBoundingClientRect().left+W/2;}
-cv.addEventListener('touchstart',e=>{e.preventDefault();getAC().resume();tL=false;tR=false;[...e.touches].forEach(t=>getLeft(t.clientX)?tL=true:tR=true);},{passive:false});
-cv.addEventListener('touchend',e=>{e.preventDefault();tL=false;tR=false;[...e.touches].forEach(t=>getLeft(t.clientX)?tL=true:tR=true);},{passive:false});
-cv.addEventListener('touchmove',e=>{e.preventDefault();tL=false;tR=false;[...e.touches].forEach(t=>getLeft(t.clientX)?tL=true:tR=true);},{passive:false});
-cv.addEventListener('mousedown',e=>{getAC().resume();getLeft(e.clientX)?tL=true:tR=true;});
-cv.addEventListener('mouseup',()=>{tL=false;tR=false;});
+// スライド入力（タッチ/マウス）
+// clientX をローカル座標に変換して targetX を更新
+function setTargetFromClientX(clientX){
+  const rect = gw.getBoundingClientRect();
+  const x = clientX - rect.left;
+  // プレイヤー幅の半分範囲内に制限
+  targetX = Math.max(pl.w/2, Math.min(W - pl.w/2, x));
+}
 
+cv.addEventListener('touchstart', e=>{ e.preventDefault(); getAC().resume(); if(e.touches[0]) setTargetFromClientX(e.touches[0].clientX); }, {passive:false});
+cv.addEventListener('touchmove', e=>{ e.preventDefault(); if(e.touches[0]) setTargetFromClientX(e.touches[0].clientX); }, {passive:false});
+cv.addEventListener('touchend', e=>{ e.preventDefault(); targetX = null; }, {passive:false});
+
+cv.addEventListener('mousedown', e=>{ getAC().resume(); setTargetFromClientX(e.clientX); });
+cv.addEventListener('mousemove', e=>{ if(e.buttons) setTargetFromClientX(e.clientX); });
+cv.addEventListener('mouseup', ()=>{ targetX = null; });
+
+// 既存のタイトル画面用背景ループ
 (function bgL(){if(gs==='title'){drawBg();requestAnimationFrame(bgL);}})();
 </script>
 </body>

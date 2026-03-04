@@ -51,6 +51,28 @@ let W,H;
 function resize(){W=gw.clientWidth;H=gw.clientHeight;cv.width=W;cv.height=H;bcv.width=W;bcv.height=H;}
 resize();window.addEventListener('resize',resize);
 
+// 角丸矩形互換ラッパー：roundRect が無ければ手動でパスを作る
+function ctxRoundRect(ctx, x, y, w, h, r) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+    return;
+  }
+  if (r === undefined) r = 4;
+  const rx = Math.min(r, w/2);
+  const ry = Math.min(r, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x + rx, y);
+  ctx.lineTo(x + w - rx, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + ry);
+  ctx.lineTo(x + w, y + h - ry);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rx, y + h);
+  ctx.lineTo(x + rx, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - ry);
+  ctx.lineTo(x, y + ry);
+  ctx.quadraticCurveTo(x, y, x + rx, y);
+  ctx.closePath();
+}
+
 // Audio
 let AC;
 function getAC(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();return AC;}
@@ -98,15 +120,16 @@ let targetX = null; // スライドで指示する目標X座標（ローカル�
 document.getElementById('sBtn').onclick=startGame;
 
 function startGame(){
-  getAC().resume();
+  try{
+    getAC().resume();
+  }catch(e){}
   document.getElementById('ov').style.display='none';
   score=0;lives=3;level=1;kills=0;bgT=0;
-  updUI();initGame();gs='playing';startMusic(1);requestAnimationFrame(loop);
+  updUI();initGame();gs='playing';startMusic(1);lastT=0;requestAnimationFrame(loop);
 }
 
 function initGame(){
   const pw=Math.min(W,480)*0.07;
-  // プレイヤー速度係数は残すがスライド制御では位置追従用に使うこともある
   pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.0015,color:'#00ffcc'};
   buls=[];ebuls=[];parts=[];items=[];
   sTm=0;esTm=0;iTm=260;inv=false;invT=0;spd=false;spdT=0;
@@ -132,12 +155,11 @@ function initBars(){
 
 function update(dt){
   // スライド追従（フレームレート依存を緩和）
-  if(targetX !== null){
-    // followFactor: 16ms（約60fps）基準で0.35追従を目安に調整
+  if(targetX !== null && pl){
     const followFactor = Math.min(1, 0.35 * (dt / 16));
     pl.x += (targetX - pl.x) * followFactor;
   }
-  pl.x = Math.max(pl.w/2, Math.min(W-pl.w/2, pl.x));
+  if(pl) pl.x = Math.max(pl.w/2, Math.min(W-pl.w/2, pl.x));
 
   if(inv){invT-=dt;if(invT<=0){inv=false;showN('');}}
   if(spd){spdT-=dt;if(spdT<=0){spd=false;showN('');}}
@@ -228,11 +250,11 @@ function applyItem(tp){
     updUI();
   }else if(tp==='speed'){
     spd=true;
-    spdT=8000; // 攻撃速度2倍の持続を延長（ms）
+    spdT=8000; // 延長済み
     showN('⚡ 攻撃速度2倍! (持続約8秒)');
   }else{
     inv=true;
-    invT=8000; // 無敵の持続を延長（ms）
+    invT=8000; // 延長済み
     showN('★ 無敵モード！ (持続約8秒)');
   }
 }
@@ -245,7 +267,21 @@ let lTo;function showLB(){const el=document.getElementById('lB');el.textContent=
 function draw(){
   cx.clearRect(0,0,W,H);drawBg();
   // Barriers
-  bars.forEach(br=>{if(br.hp<=0)return;const a=br.hp/br.mhp,cs=['#ff3333','#ff6600','#ffcc00','#88ff00','#00ffcc'],c=cs[Math.min(br.hp-1,4)];cx.globalAlpha=0.25+a*0.55;cx.fillStyle=c;cx.beginPath();cx.roundRect(br.x,br.y,br.w,br.h,4);cx.fill();cx.globalAlpha=1;cx.strokeStyle=c;cx.lineWidth=1.5;cx.strokeRect(br.x,br.y,br.w,br.h);for(let i=0;i<br.mhp;i++){cx.fillStyle=i<br.hp?'#00ffcc':'rgba(255,255,255,0.1)';cx.fillRect(br.x+2+i*(br.w-4)/br.mhp,br.y+br.h-4,(br.w-4)/br.mhp-1,3);}});
+  bars.forEach(br=>{
+    if(br.hp<=0) return;
+    const a=br.hp/br.mhp,cs=['#ff3333','#ff6600','#ffcc00','#88ff00','#00ffcc'],c=cs[Math.min(br.hp-1,4)];
+    cx.globalAlpha=0.25+a*0.55;
+    cx.fillStyle=c;
+    ctxRoundRect(cx, br.x, br.y, br.w, br.h, 4);
+    cx.fill();
+    cx.globalAlpha=1;
+    cx.strokeStyle=c;cx.lineWidth=1.5;
+    cx.stroke();
+    for(let i=0;i<br.mhp;i++){
+      cx.fillStyle = i < br.hp ? '#00ffcc' : 'rgba(255,255,255,0.1)';
+      cx.fillRect(br.x+2+i*(br.w-4)/br.mhp, br.y+br.h-4, (br.w-4)/br.mhp-1, 3);
+    }
+  });
   // Player
   const p=pl,fl=inv&&Math.floor(Date.now()/90)%2===0;
   if(!fl){
@@ -260,15 +296,17 @@ function draw(){
   ebuls.forEach(b=>{cx.fillStyle=b.color;cx.shadowColor=b.color;cx.shadowBlur=8;cx.save();cx.translate(b.x,b.y+b.h/2);cx.rotate(Math.PI/4);cx.fillRect(-4,-4,8,8);cx.restore();cx.shadowBlur=0;});
   // Enemies
   enems.forEach(e=>{
-    if(!e.alive)return;
+    if(!e.alive) return;
     cx.fillStyle=e.color;cx.shadowColor=e.color;cx.shadowBlur=6;
     const ex=e.x,ey=e.y,ew=e.w,eh=e.h;
     if(e.row===0){
       cx.beginPath();cx.ellipse(ex,ey,ew/2,eh/2.2,0,0,Math.PI*2);cx.fill();
       cx.fillStyle='rgba(0,0,0,0.65)';cx.beginPath();cx.arc(ex-ew*0.14,ey-eh*0.07,ew*0.1,0,Math.PI*2);cx.arc(ex+ew*0.14,ey-eh*0.07,ew*0.1,0,Math.PI*2);cx.fill();
     }else if(e.row<=2){
-      cx.beginPath();cx.roundRect(ex-ew/2,ey-eh/2,ew,eh,3);cx.fill();
-      cx.strokeStyle=e.color;cx.lineWidth=2;cx.beginPath();
+      ctxRoundRect(cx, ex-ew/2, ey-eh/2, ew, eh, 3);
+      cx.fill();
+      cx.strokeStyle=e.color;cx.lineWidth=2;
+      cx.beginPath();
       cx.moveTo(ex-ew*0.2,ey-eh/2);cx.lineTo(ex-ew*0.35+(e.fr?3:0),ey-eh);
       cx.moveTo(ex+ew*0.2,ey-eh/2);cx.lineTo(ex+ew*0.35-(e.fr?3:0),ey-eh);
       for(let i=0;i<2;i++){cx.moveTo(ex-ew/2-2,ey-eh/4+i*eh/2);cx.lineTo(ex-ew/2-(e.fr?7:4),ey-eh/4+i*eh/2+3);cx.moveTo(ex+ew/2+2,ey-eh/4+i*eh/2);cx.lineTo(ex+ew/2+(e.fr?7:4),ey-eh/4+i*eh/2+3);}
@@ -292,26 +330,41 @@ function draw(){
 }
 
 let lastT=0;
-function loop(ts=0){if(gs!=='playing')return;const dt=Math.min(ts-lastT,32);lastT=ts;update(dt);draw();requestAnimationFrame(loop);}
+function loop(ts=0){
+  if(gs!=='playing') return;
+  const dt=Math.min(ts-lastT,32);
+  lastT=ts;
+  try{
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }catch(err){
+    // 例外が出たらコンソールに出力してゲームを終了状態に戻す（安全策）
+    console.error('game loop error', err);
+    gs='title';
+    stopMusic();
+    document.getElementById('ov').style.display='flex';
+  }
+}
 
 // スライド入力（タッチ/マウス）
 // clientX をローカル座標に変換して targetX を更新
 function setTargetFromClientX(clientX){
+  if(!pl) return; // 開始前の入力でエラーにならないようガード
   const rect = gw.getBoundingClientRect();
   const x = clientX - rect.left;
-  // プレイヤー幅の半分範囲内に制限
   targetX = Math.max(pl.w/2, Math.min(W - pl.w/2, x));
 }
 
-cv.addEventListener('touchstart', e=>{ e.preventDefault(); getAC().resume(); if(e.touches[0]) setTargetFromClientX(e.touches[0].clientX); }, {passive:false});
+cv.addEventListener('touchstart', e=>{ e.preventDefault(); try{ getAC().resume(); }catch(e){} if(e.touches[0]) setTargetFromClientX(e.touches[0].clientX); }, {passive:false});
 cv.addEventListener('touchmove', e=>{ e.preventDefault(); if(e.touches[0]) setTargetFromClientX(e.touches[0].clientX); }, {passive:false});
 cv.addEventListener('touchend', e=>{ e.preventDefault(); targetX = null; }, {passive:false});
 
-cv.addEventListener('mousedown', e=>{ getAC().resume(); setTargetFromClientX(e.clientX); });
+cv.addEventListener('mousedown', e=>{ try{ getAC().resume(); }catch(e){} setTargetFromClientX(e.clientX); });
 cv.addEventListener('mousemove', e=>{ if(e.buttons) setTargetFromClientX(e.clientX); });
 cv.addEventListener('mouseup', ()=>{ targetX = null; });
 
-// 既存のタイトル画面用背景ループ
+// タイトル画面の背景アニメーション（残しておく）
 (function bgL(){if(gs==='title'){drawBg();requestAnimationFrame(bgL);}})();
 </script>
 </body>

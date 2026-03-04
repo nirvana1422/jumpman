@@ -5,26 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>FOREST HERO</title>
 <style>
-:root{
-  /* ここでボタンサイズを調整（例: 74px）。お好みで数値を変えてください */
-  --btn-size: 74px;
-}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#1a3008;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;overflow:hidden;user-select:none;-webkit-user-select:none;}
 #wrap{position:relative;display:flex;flex-direction:column;align-items:center;}
 #hud{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;color:#fff;font-size:11px;font-weight:bold;background:#1a3008;border-bottom:3px solid #4a9a20;flex-wrap:wrap;gap:2px;}
 canvas{display:block;touch-action:none;}
-#dpad-wrap{display:flex;justify-content:center;align-items:center;padding:6px 0;background:#1a3008;width:100%;}
-#dpad{display:grid;grid-template-columns:var(--btn-size) var(--btn-size) var(--btn-size);grid-template-rows:var(--btn-size) var(--btn-size) var(--btn-size);gap:8px;}
-.db{width:var(--btn-size);height:var(--btn-size);background:rgba(60,130,20,0.9);border:2px solid #68b828;border-radius:12px;color:#ffe040;font-size:calc(var(--btn-size) * 0.45);display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
-.db:active{background:rgba(120,220,50,0.95);transform:translateY(1px);}
-.dx{width:var(--btn-size);height:var(--btn-size);}
+#ctrl-wrap{position:relative;width:100%;background:#1a3008;flex-shrink:0;}
+#stick-canvas{display:block;touch-action:none;}
 #ov{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,22,4,0.95);color:#f0e060;text-align:center;padding:16px;z-index:10;}
 #ov h1{font-size:clamp(20px,6vw,34px);color:#ffe040;text-shadow:2px 2px 0 #4a2800;margin-bottom:6px;}
 #ov h2{font-size:clamp(10px,3vw,14px);color:#88d030;margin-bottom:10px;}
 #ov p{font-size:clamp(9px,2.4vw,12px);color:#c8e890;line-height:2.0;margin-bottom:14px;}
-#startBtn{padding:14px 48px;font-size:clamp(16px,4.5vw,20px);font-family:'Courier New',monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 6px 0 #183008;display:block;border-radius:8px;touch-action:manipulation;}
-#startBtn:active{transform:translateY(2px);box-shadow:0 3px 0 #183008;}
+#startBtn{padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:'Courier New',monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #183008;display:block;}
+#startBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #183008;}
 #lvb{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#ffe040;font-size:clamp(14px,5vw,26px);font-weight:bold;background:rgba(8,22,4,0.92);padding:10px 20px;border:3px solid #68b828;pointer-events:none;z-index:9;opacity:0;transition:opacity 0.3s;white-space:nowrap;}
 </style>
 </head>
@@ -39,12 +32,8 @@ canvas{display:block;touch-action:none;}
     <span id="hSt" style="color:#ffe040"></span>
   </div>
   <canvas id="C"></canvas>
-  <div id="dpad-wrap">
-    <div id="dpad">
-      <div class="dx"></div><div class="db" id="bU">&#9650;</div><div class="dx"></div>
-      <div class="db" id="bL">&#9664;</div><div class="dx"></div><div class="db" id="bR">&#9654;</div>
-      <div class="dx"></div><div class="db" id="bD">&#9660;</div><div class="dx"></div>
-    </div>
+  <div id="ctrl-wrap">
+    <canvas id="stick-canvas"></canvas>
   </div>
   <div id="lvb">FLOOR CLEAR!</div>
   <div id="ov">
@@ -57,7 +46,7 @@ canvas{display:block;touch-action:none;}
       &#129514; ポーションでスピードUP！(6秒)<br>
       &#128126; スライム・アイテムは時間で復活！<br>
       &#9201;&#65039; 敵を倒すと残り時間+5秒！<br><br>
-      矢印ボタン・スワイプ・矢印キーで操作
+      スティック（右下）・スワイプ・矢印キーで操作
     </p>
     <button id="startBtn">&#9654; 冒険開始！</button>
   </div>
@@ -66,33 +55,149 @@ canvas{display:block;touch-action:none;}
 (function(){
 "use strict";
 
-// ── DOM refs ──────────────────────────────────────────
-var CV  = document.getElementById('C');
-var ctx = CV.getContext('2d');
-var OV  = document.getElementById('ov');
-var LVB = document.getElementById('lvb');
+var CV   = document.getElementById('C');
+var ctx  = CV.getContext('2d');
+var SC   = document.getElementById('stick-canvas');
+var sctx = SC.getContext('2d');
+var OV   = document.getElementById('ov');
+var LVB  = document.getElementById('lvb');
+var CW   = document.getElementById('ctrl-wrap');
 
-// ── Canvas size ───────────────────────────────────────
 var COLS = 21, ROWS = 21, T = 24;
+var STICK_H = 140;
+var STICK_R = 54;
+var KNOB_R  = 28;
+
+var stCx = 0, stCy = 0;
+var knobX = 0, knobY = 0;
+var stickActive = false;
+var stickDc = 0, stickDr = 0;
+
 function resize() {
-  // HUD と D-pad の実際の高さを使ってキャンバス最大値を算出する（ボタンサイズ変更に追従）
-  var hudH = document.getElementById('hud').offsetHeight || 0;
-  var dpadWrap = document.getElementById('dpad-wrap');
-  var dpadH = dpadWrap ? dpadWrap.offsetHeight : 0;
   var mw = Math.min(window.innerWidth, 520);
-  var mh = Math.max(120, window.innerHeight - hudH - dpadH - 16); // 下の余白分を確保
+  var mh = window.innerHeight - 36 - STICK_H;
   var sz = Math.min(mw, mh);
   T = Math.max(14, Math.floor(sz / COLS));
   CV.width  = T * COLS;
   CV.height = T * ROWS;
-  var w = CV.width + 'px';
-  document.getElementById('wrap').style.width = w;
-  document.getElementById('dpad-wrap').style.width = w;
+  var w = CV.width;
+  document.getElementById('wrap').style.width = w + 'px';
+  CW.style.width = w + 'px';
+  SC.width  = w;
+  SC.height = STICK_H;
+  stCx = w - STICK_R - 24;
+  stCy = STICK_H / 2;
+  knobX = stCx; knobY = stCy;
 }
 window.addEventListener('resize', resize);
 resize();
 
-// ── Audio (生成はユーザー操作後) ──────────────────────
+function drawStick() {
+  sctx.clearRect(0, 0, SC.width, SC.height);
+  sctx.fillStyle = 'rgba(100,180,50,0.5)';
+  sctx.font = 'bold 11px monospace';
+  sctx.textAlign = 'left';
+  sctx.textBaseline = 'middle';
+  sctx.fillText('← スワイプ or 矢印キーでも操作', 10, STICK_H / 2);
+
+  sctx.beginPath();
+  sctx.arc(stCx, stCy, STICK_R, 0, Math.PI * 2);
+  sctx.fillStyle = 'rgba(30,80,10,0.85)';
+  sctx.fill();
+  sctx.strokeStyle = '#4a9a20';
+  sctx.lineWidth = 3;
+  sctx.stroke();
+
+  var dirs = [{dx:0,dy:-1,ch:'▲'},{dx:0,dy:1,ch:'▼'},{dx:-1,dy:0,ch:'◀'},{dx:1,dy:0,ch:'▶'}];
+  dirs.forEach(function(d){
+    var active = (d.dx===stickDc && d.dy===stickDr && stickActive);
+    sctx.fillStyle = active ? '#ffe040' : 'rgba(100,200,50,0.4)';
+    sctx.font = 'bold ' + (active ? 16 : 13) + 'px monospace';
+    sctx.textAlign = 'center';
+    sctx.textBaseline = 'middle';
+    sctx.fillText(d.ch, stCx + d.dx*(STICK_R-14), stCy + d.dy*(STICK_R-14));
+  });
+
+  var grd = sctx.createRadialGradient(knobX-4, knobY-4, 2, knobX, knobY, KNOB_R);
+  grd.addColorStop(0, stickActive ? '#a0ff60' : '#78d030');
+  grd.addColorStop(1, stickActive ? '#3a9010' : '#2a6810');
+  sctx.beginPath();
+  sctx.arc(knobX, knobY, KNOB_R, 0, Math.PI * 2);
+  sctx.fillStyle = grd;
+  sctx.fill();
+  sctx.strokeStyle = stickActive ? '#ffe040' : '#68b828';
+  sctx.lineWidth = 3;
+  sctx.stroke();
+
+  sctx.beginPath();
+  sctx.arc(knobX-6, knobY-6, KNOB_R*0.35, 0, Math.PI*2);
+  sctx.fillStyle = 'rgba(255,255,255,0.18)';
+  sctx.fill();
+}
+
+function stickInput(cx, cy) {
+  var dx = cx - stCx, dy = cy - stCy;
+  var len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 12) {
+    knobX = stCx; knobY = stCy;
+    stickDc = 0; stickDr = 0;
+    G.setDir(0, 0);
+    return;
+  }
+  var clamp = Math.min(len, STICK_R - KNOB_R + 8);
+  knobX = stCx + dx/len * clamp;
+  knobY = stCy + dy/len * clamp;
+  var angle = Math.atan2(dy, dx);
+  var dc = 0, dr = 0;
+  if (angle > -Math.PI*3/4 && angle <= -Math.PI/4) { dr = -1; }
+  else if (angle > Math.PI/4 && angle <= Math.PI*3/4) { dr = 1; }
+  else if (angle > -Math.PI/4 && angle <= Math.PI/4) { dc = 1; }
+  else { dc = -1; }
+  if (dc !== stickDc || dr !== stickDr) {
+    stickDc = dc; stickDr = dr;
+    if (G.on && G.phase === 'play') G.setDir(dc, dr);
+  }
+}
+
+SC.addEventListener('touchstart', function(e){
+  e.preventDefault();
+  initAudio();
+  if (!G.on || G.phase !== 'play') return;
+  stickActive = true;
+  var rc = SC.getBoundingClientRect();
+  var t = e.touches[0];
+  stickInput(t.clientX - rc.left, t.clientY - rc.top);
+}, {passive:false});
+SC.addEventListener('touchmove', function(e){
+  e.preventDefault();
+  if (!stickActive) return;
+  var rc = SC.getBoundingClientRect();
+  var t = e.touches[0];
+  stickInput(t.clientX - rc.left, t.clientY - rc.top);
+}, {passive:false});
+SC.addEventListener('touchend', function(e){
+  e.preventDefault();
+  stickActive = false;
+  knobX = stCx; knobY = stCy;
+  stickDc = 0; stickDr = 0;
+}, {passive:false});
+SC.addEventListener('mousedown', function(e){
+  if (!G.on || G.phase !== 'play') return;
+  stickActive = true;
+  var rc = SC.getBoundingClientRect();
+  stickInput(e.clientX - rc.left, e.clientY - rc.top);
+});
+SC.addEventListener('mousemove', function(e){
+  if (!stickActive) return;
+  var rc = SC.getBoundingClientRect();
+  stickInput(e.clientX - rc.left, e.clientY - rc.top);
+});
+SC.addEventListener('mouseup', function(){
+  stickActive = false;
+  knobX = stCx; knobY = stCy;
+  stickDc = 0; stickDr = 0;
+});
+
 var AC = null;
 function initAudio() {
   if (AC) return;
@@ -165,8 +270,6 @@ function playMusic(lv) {
   }, p.tm);
 }
 
-// ── MAP ───────────────────────────────────────────────
-// 0=壁 1=通路+宝石 2=通路のみ
 var MAP = [
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,0],
@@ -196,11 +299,9 @@ var TH = [
 {g1:'#b07818',g2:'#986010',p1:'#d0a040',p2:'#b88830',tA:'#a83808',tB:'#c85818',tC:'#e88030',tr:'#582008',gem:'#ff68b8',gem2:'#e04898'},
 {g1:'#182840',g2:'#102030',p1:'#506880',p2:'#405870',tA:'#182050',tB:'#283870',tC:'#3850a0',tr:'#181830',gem:'#78ff98',gem2:'#48d068'},
 ];
-
 var ECOLS = ['#38c038','#c03838','#3870e0','#707070'];
 var ENEMY_RT = 10, ITEM_RT = 12;
 
-// ── Draw ──────────────────────────────────────────────
 function drawPath(c, r, th) {
   ctx.fillStyle = ((c+r)%3===0) ? th.p2 : th.p1;
   ctx.fillRect(c*T, r*T, T, T);
@@ -278,20 +379,24 @@ function drawItemGhost(px, py, cd) {
   ctx.fillText(Math.ceil(cd), 0, 0);
   ctx.globalAlpha=1; ctx.restore();
 }
-function drawHero(px, py, dc, dr, armed, invT) {
+function drawHero(px, py, dc, dr, armed, invT, warping) {
   var now=Date.now()/1000;
-  if (invT>0 && Math.floor(now*9)%2===1) return;
+  // ワープ中は高速点滅、通常無敵は低速点滅
+  if (warping) {
+    if (Math.floor(now*18)%2===1) return;
+  } else if (invT>0) {
+    if (Math.floor(now*9)%2===1) return;
+  }
   var mov=(dc!==0||dr!==0), bob=mov?Math.sin(now*11)*T*.05:0, leg=mov?Math.sin(now*11):0;
   var left=(dc<0||(dc===0)), r=T;
   ctx.save(); ctx.translate(px, py+bob);
-  // legs
+  // ワープ中は青白く光らせる
+  if (warping) { ctx.shadowColor='#80d0ff'; ctx.shadowBlur=18; }
   ctx.fillStyle='#2a4ea0';
   ctx.save(); ctx.translate(-r*.13,r*.18); ctx.rotate(leg*.28); ctx.fillRect(-r*.10,0,r*.20,r*.27); ctx.restore();
   ctx.fillStyle='#2a4ea0';
   ctx.save(); ctx.translate(r*.13,r*.18); ctx.rotate(-leg*.28); ctx.fillRect(-r*.10,0,r*.20,r*.27); ctx.restore();
-  // body
   ctx.fillStyle=armed?'#a81818':'#1848b8'; ctx.fillRect(-r*.26,-r*.19,r*.52,r*.40);
-  // arms
   var as=left?1:-1;
   ctx.fillStyle=armed?'#a81818':'#1848b8';
   ctx.save(); ctx.translate(-as*r*.32,-r*.11); ctx.rotate(as*.2+leg*.20);
@@ -309,12 +414,11 @@ function drawHero(px, py, dc, dr, armed, invT) {
   ctx.fillRect(-r*.09,0,r*.18,r*.26);
   ctx.fillStyle='#d8a060'; ctx.beginPath(); ctx.arc(0,r*.28,r*.11,0,Math.PI*2); ctx.fill();
   ctx.restore();
-  // head
+  ctx.shadowBlur=0;
   ctx.fillStyle='#d8a060'; ctx.fillRect(-r*.21,-r*.64,r*.42,r*.37);
   ctx.fillStyle='#1a1000';
   var ex=left?-r*.11:r*.01;
   ctx.fillRect(ex-r*.10,-r*.47,r*.11,r*.08); ctx.fillRect(ex+r*.06,-r*.47,r*.11,r*.08);
-  // helmet
   ctx.fillStyle=armed?'#a81818':'#483008';
   ctx.fillRect(-r*.23,-r*.76,r*.46,r*.14); ctx.fillRect(-r*.19,-r*.86,r*.38,r*.12);
   ctx.restore();
@@ -365,7 +469,6 @@ function drawArrow(px, py, dc, dr) {
   ctx.stroke(); ctx.globalAlpha=1; ctx.restore();
 }
 
-// ── Particles ─────────────────────────────────--------
 var PARTS = [];
 function spawnP(x,y,col,n) {
   for (var i=0;i<n;i++) {
@@ -394,20 +497,16 @@ function drawP() {
   ctx.globalAlpha=1;
 }
 
-// ── Game ──────────────────────────────────────────────
-// （以降のゲームロジックは元コードのまま）
-// ...（中略せず元のロジックをすべて維持しています。下に続きます）
-
 var G = {
   on:false, level:1, score:0, hasLife:false,
   map:[], gems:[], enemies:[], items:[],
   phase:'play',
   wTimer:0, sTimer:0, timeLeft:90, phaseTimer:0, timeup:false,
-
   pc:10, pr:10, px:0, py:0,
   pDc:0, pDr:0, tDc:0, tDr:0,
   moving:false, moveT:0, moveDur:0.14,
   armed:false, invT:0, alive:true, atWall:false,
+  warping:false,  // ← ワープ無敵フラグ
 
   ok: function(r,c) {
     if (r===10 && (c<0||c>=COLS)) return true;
@@ -429,15 +528,14 @@ var G = {
     this.map = MAP.map(function(row){ return row.slice(); });
     this.gems=[];
     for (var r=0;r<ROWS;r++) for (var c=0;c<COLS;c++) if (this.map[r][c]===1) this.gems.push({r:r,c:c,eaten:false});
-
     this.pc=10; this.pr=10;
     this.px=this.pc*T+T/2; this.py=this.pr*T+T/2;
     this.pDc=0; this.pDr=0; this.tDc=0; this.tDr=0;
     this.moving=false; this.moveT=0; this.atWall=false;
     this.moveDur=Math.max(0.08,0.14-(lv-1)*0.010);
     this.armed=false; this.invT=0; this.alive=true;
+    this.warping=false;
     this.timeLeft=Math.max(45, 90-(lv-1)*8);
-
     var spd=T*(1.4+(lv-1)*.25);
     this.enemies=[];
     for (var i=0;i<4;i++) {
@@ -471,9 +569,14 @@ var G = {
   },
   tryStart: function() {
     if (this.moving || (!this.tDc&&!this.tDr)) return;
+    var prevC = this.pc;
     var nr=this.pr+this.tDr, nc=this.pc+this.tDc;
     if (this.pr===10){if(nc<0)nc=COLS-1; if(nc>=COLS)nc=0;}
     if (this.ok(nr,nc)) {
+      // ワープ判定：行10で列が飛んだ（端をまたいだ）とき
+      if (this.pr===10 && Math.abs(nc - prevC) > 1) {
+        this.warping = true;
+      }
       this.pDc=this.tDc; this.pDr=this.tDr;
       this.pr=nr; this.pc=nc; this.moving=true; this.moveT=0; this.atWall=false;
     }
@@ -489,31 +592,44 @@ var G = {
       return;
     }
     if (this.phase==='lvup') { updP(dt); return; }
-
     if (this.wTimer>0) { this.wTimer-=dt; if(this.wTimer<=0){this.wTimer=0;this.armed=false;for(var i=0;i<this.enemies.length;i++)this.enemies[i].frightenT=0;} }
     if (this.sTimer>0) { this.sTimer-=dt; if(this.sTimer<=0)this.sTimer=0; }
     if (this.invT>0) this.invT-=dt;
-
-    // 制限時間
     this.timeLeft-=dt;
     if (this.timeLeft<=0) {
       this.timeLeft=0; this.alive=false; this.timeup=true;
       sDie(); spawnP(this.px,this.py,'#ff8800',24);
       this.phase='dead'; this.phaseTimer=2.5; stopMusic(); return;
     }
-
-    // 壁まで直進
     var dur=this.sTimer>0?this.moveDur*.55:this.moveDur;
     if (!this.moving) {
+      // 移動完了時：ワープゾーン外に出たらワープ解除
+      if (this.warping && this.pr===10) {
+        // 行10の中央付近（通路のないマスより内側）に戻ったら解除
+        if (this.pc > 0 && this.pc < COLS-1 && this.map[this.pr][this.pc] !== 2) {
+          this.warping = false;
+        }
+        // 行10を完全に抜けたら解除
+      } else if (this.warping && this.pr !== 10) {
+        this.warping = false;
+      }
+
       if (this.pDc||this.pDr) {
+        var prevC2 = this.pc;
         var nr2=this.pr+this.pDr, nc2=this.pc+this.pDc;
         if (this.pr===10){if(nc2<0)nc2=COLS-1;if(nc2>=COLS)nc2=0;}
         if (this.ok(nr2,nc2)) {
+          // 継続移動でもワープ検出
+          if (this.pr===10 && Math.abs(nc2 - prevC2) > 1) { this.warping = true; }
           var turned=false;
           if ((this.tDc||this.tDr)&&(this.tDc!==this.pDc||this.tDr!==this.pDr)) {
+            var prevC3 = this.pc;
             var tnr=this.pr+this.tDr, tnc=this.pc+this.tDc;
             if (this.pr===10){if(tnc<0)tnc=COLS-1;if(tnc>=COLS)tnc=0;}
-            if (this.ok(tnr,tnc)){this.pDc=this.tDc;this.pDr=this.tDr;this.pr=tnr;this.pc=tnc;this.moving=true;this.moveT=0;this.atWall=false;turned=true;}
+            if (this.ok(tnr,tnc)){
+              if (this.pr===10 && Math.abs(tnc - prevC3) > 1) { this.warping = true; }
+              this.pDc=this.tDc;this.pDr=this.tDr;this.pr=tnr;this.pc=tnc;this.moving=true;this.moveT=0;this.atWall=false;turned=true;
+            }
           }
           if (!turned){this.pr=nr2;this.pc=nc2;this.moving=true;this.moveT=0;this.atWall=false;}
         } else {
@@ -530,13 +646,10 @@ var G = {
       this.py+=(ty-this.py)*Math.min(dt*24,1);
       if (pct>=1){this.px=tx;this.py=ty;this.moving=false;}
     }
-
-    // gems
     for (var i=0;i<this.gems.length;i++) {
       var g=this.gems[i];
       if (!g.eaten&&g.r===this.pr&&g.c===this.pc){g.eaten=true;this.score+=10;sGem();spawnP(this.px,this.py,TH[(this.level-1)%3].gem,4);}
     }
-    // items
     for (var i=0;i<this.items.length;i++) {
       var it=this.items[i];
       if (it.dead){it.respawnTimer-=dt;if(it.respawnTimer<=0)this.reviveItem(it);continue;}
@@ -548,7 +661,6 @@ var G = {
         else{this.sTimer=6;this.score+=30;sPotion();spawnP(this.px,this.py,'#60ff90',10);spawnT(this.px,this.py-T,'SPEED!','#60ff90');}
       }
     }
-    // enemies
     var self=this;
     for (var i=0;i<this.enemies.length;i++) {
       var e=this.enemies[i];
@@ -586,7 +698,7 @@ var G = {
           e.alive=false; e.dead=true; e.respawnTimer=ENEMY_RT;
           this.score+=200; this.timeLeft+=5;
           sKill(); spawnP(e.px,e.py,e.col,20); spawnT(e.px,e.py-T,'+200 +5s','#ffe060');
-        } else if (this.invT<=0) {
+        } else if (this.invT<=0 && !this.warping) {  // ← ワープ中は無敵
           if (this.hasLife){this.hasLife=false;this.invT=2.5;sDie();spawnP(this.px,this.py,'#ff4466',8);spawnT(this.px,this.py-T,'LIFE!','#ff8888');}
           else{this.alive=false;sDie();spawnP(this.px,this.py,'#ff4466',24);this.phase='dead';this.phaseTimer=2.5;stopMusic();}
         }
@@ -596,7 +708,6 @@ var G = {
     if (left===0){this.doLvUp();return;}
     updP(dt); this.updHUD(left);
   },
-
   doLvUp: function() {
     var self=this; this.phase='lvup'; sLvUp(); stopMusic();
     LVB.textContent='FLOOR '+(this.level+1)+'  GO!'; LVB.style.opacity='1';
@@ -614,7 +725,10 @@ var G = {
     var t=Math.ceil(this.timeLeft);
     tEl.textContent=t+'s';
     tEl.style.color=t<=10?'#ff4444':t<=20?'#ffaa00':'#ffe040';
-    var st=''; if(this.wTimer>0)st='ARM'+this.wTimer.toFixed(0)+'s'; else if(this.sTimer>0)st='SPD'+this.sTimer.toFixed(0)+'s';
+    var st='';
+    if(this.warping) st='WARP!';
+    else if(this.wTimer>0)st='ARM'+this.wTimer.toFixed(0)+'s';
+    else if(this.sTimer>0)st='SPD'+this.sTimer.toFixed(0)+'s';
     document.getElementById('hSt').textContent=st;
   },
   draw: function() {
@@ -637,14 +751,22 @@ var G = {
     }
     if (this.alive||this.phase==='play'){
       if (this.tDc||this.tDr) drawArrow(this.px,this.py,this.tDc,this.tDr);
-      drawHero(this.px,this.py,this.pDc,this.pDr,this.armed,this.invT);
+      drawHero(this.px,this.py,this.pDc,this.pDr,this.armed,this.invT,this.warping);
     }
     for (var r=0;r<ROWS;r++) for (var c=0;c<COLS;c++) if(!this.map[r][c]) drawTree(c,r,th);
     drawP();
   }
 };
 
-// ── Input ─────────────────────────────────────────────
+document.addEventListener('keydown',function(e){
+  if(!G.on)return;
+  var k=e.key;
+  if(k==='ArrowLeft'||k==='a'){G.setDir(-1,0);e.preventDefault();}
+  else if(k==='ArrowRight'||k==='d'){G.setDir(1,0);e.preventDefault();}
+  else if(k==='ArrowUp'||k==='w'){G.setDir(0,-1);e.preventDefault();}
+  else if(k==='ArrowDown'||k==='s'){G.setDir(0,1);e.preventDefault();}
+});
+
 var swipeStart=null;
 CV.addEventListener('touchstart',function(e){
   e.preventDefault();
@@ -661,46 +783,27 @@ CV.addEventListener('touchend',function(e){
   if(Math.abs(dx)<18&&Math.abs(dy)<18)return;
   if(Math.abs(dx)>=Math.abs(dy))G.setDir(dx>0?1:-1,0);else G.setDir(0,dy>0?1:-1);
 },{passive:false});
-document.addEventListener('keydown',function(e){
-  if(!G.on)return;
-  var k=e.key;
-  if(k==='ArrowLeft'||k==='a'){G.setDir(-1,0);e.preventDefault();}
-  else if(k==='ArrowRight'||k==='d'){G.setDir(1,0);e.preventDefault();}
-  else if(k==='ArrowUp'||k==='w'){G.setDir(0,-1);e.preventDefault();}
-  else if(k==='ArrowDown'||k==='s'){G.setDir(0,1);e.preventDefault();}
-});
-function regDpad(id,dc,dr){
-  var btn=document.getElementById(id);
-  btn.addEventListener('touchstart',function(e){e.preventDefault();if(G.on&&G.phase==='play')G.setDir(dc,dr);},{passive:false});
-  btn.addEventListener('mousedown',function(){if(G.on&&G.phase==='play')G.setDir(dc,dr);});
-}
-regDpad('bU',0,-1); regDpad('bD',0,1); regDpad('bL',-1,0); regDpad('bR',1,0);
 
-// ── Overlay helper ───────────────────────────────────
 function showOv(title, sub, body, btnLabel) {
   OV.innerHTML =
     '<h1>'+title+'</h1>'+
     '<h2>'+sub+'</h2>'+
     '<p>'+body+'</p>'+
-    '<button id="startBtn">'+btnLabel+'</button>';
+    '<button id="startBtn" style="padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:Courier New,monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #183008;">'+btnLabel+'</button>';
   OV.style.display='flex';
-  var b = document.getElementById('startBtn');
-  if (b) {
-    b.addEventListener('click', startGame);
-    b.addEventListener('touchend', function(e){e.preventDefault();startGame();});
-  }
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('startBtn').addEventListener('touchend', function(e){e.preventDefault();startGame();});
 }
 
-// ── Loop ─────────────────────────────────────────────
 var last=0;
 function loop(ts){
   var dt=Math.min((ts-last)/1000,.05); last=ts;
   if(G.on){G.update(dt);G.draw();}
+  drawStick();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-// ── Start ─────────────────────────────────────────────
 function startGame(){
   initAudio();
   if(AC&&AC.state==='suspended') AC.resume();
@@ -709,16 +812,10 @@ function startGame(){
   G.init(1);
   playMusic(1);
 }
-
-// タイトルボタン登録（初期画面のボタン）
-var initialStart = document.getElementById('startBtn');
-if (initialStart) {
-  initialStart.addEventListener('click', startGame);
-  initialStart.addEventListener('touchend', function(e){e.preventDefault();startGame();});
-}
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('touchend', function(e){e.preventDefault();startGame();});
 
 })();
 </script>
-
 </body>
 </html>

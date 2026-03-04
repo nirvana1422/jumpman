@@ -5,22 +5,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>FOREST HERO</title>
 <style>
+:root{
+  /* ここでボタンサイズを調整（例: 74px）。お好みで数値を変えてください */
+  --btn-size: 74px;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#1a3008;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;overflow:hidden;user-select:none;-webkit-user-select:none;}
 #wrap{position:relative;display:flex;flex-direction:column;align-items:center;}
 #hud{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;color:#fff;font-size:11px;font-weight:bold;background:#1a3008;border-bottom:3px solid #4a9a20;flex-wrap:wrap;gap:2px;}
 canvas{display:block;touch-action:none;}
-#dpad-wrap{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#1a3008;width:100%;}
-#dpad-left{display:flex;flex-direction:column;gap:8px;}
-#dpad-right{display:flex;flex-direction:row;gap:8px;align-items:center;}
-.db{background:rgba(60,130,20,0.9);border:3px solid #68b828;border-radius:14px;color:#ffe040;font-size:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;width:72px;height:72px;box-shadow:0 4px 0 #2a6008;}
-.db:active{background:rgba(120,220,50,0.95);transform:translateY(2px);box-shadow:0 2px 0 #2a6008;}
+#dpad-wrap{display:flex;justify-content:center;align-items:center;padding:6px 0;background:#1a3008;width:100%;}
+#dpad{display:grid;grid-template-columns:var(--btn-size) var(--btn-size) var(--btn-size);grid-template-rows:var(--btn-size) var(--btn-size) var(--btn-size);gap:8px;}
+.db{width:var(--btn-size);height:var(--btn-size);background:rgba(60,130,20,0.9);border:2px solid #68b828;border-radius:12px;color:#ffe040;font-size:calc(var(--btn-size) * 0.45);display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.db:active{background:rgba(120,220,50,0.95);transform:translateY(1px);}
+.dx{width:var(--btn-size);height:var(--btn-size);}
 #ov{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,22,4,0.95);color:#f0e060;text-align:center;padding:16px;z-index:10;}
 #ov h1{font-size:clamp(20px,6vw,34px);color:#ffe040;text-shadow:2px 2px 0 #4a2800;margin-bottom:6px;}
 #ov h2{font-size:clamp(10px,3vw,14px);color:#88d030;margin-bottom:10px;}
 #ov p{font-size:clamp(9px,2.4vw,12px);color:#c8e890;line-height:2.0;margin-bottom:14px;}
-#startBtn{padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:'Courier New',monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #183008;display:block;}
-#startBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #183008;}
+#startBtn{padding:14px 48px;font-size:clamp(16px,4.5vw,20px);font-family:'Courier New',monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 6px 0 #183008;display:block;border-radius:8px;touch-action:manipulation;}
+#startBtn:active{transform:translateY(2px);box-shadow:0 3px 0 #183008;}
 #lvb{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#ffe040;font-size:clamp(14px,5vw,26px);font-weight:bold;background:rgba(8,22,4,0.92);padding:10px 20px;border:3px solid #68b828;pointer-events:none;z-index:9;opacity:0;transition:opacity 0.3s;white-space:nowrap;}
 </style>
 </head>
@@ -36,13 +40,10 @@ canvas{display:block;touch-action:none;}
   </div>
   <canvas id="C"></canvas>
   <div id="dpad-wrap">
-    <div id="dpad-left">
-      <div class="db" id="bU">&#9650;</div>
-      <div class="db" id="bD">&#9660;</div>
-    </div>
-    <div id="dpad-right">
-      <div class="db" id="bL">&#9664;</div>
-      <div class="db" id="bR">&#9654;</div>
+    <div id="dpad">
+      <div class="dx"></div><div class="db" id="bU">&#9650;</div><div class="dx"></div>
+      <div class="db" id="bL">&#9664;</div><div class="dx"></div><div class="db" id="bR">&#9654;</div>
+      <div class="dx"></div><div class="db" id="bD">&#9660;</div><div class="dx"></div>
     </div>
   </div>
   <div id="lvb">FLOOR CLEAR!</div>
@@ -65,15 +66,21 @@ canvas{display:block;touch-action:none;}
 (function(){
 "use strict";
 
+// ── DOM refs ──────────────────────────────────────────
 var CV  = document.getElementById('C');
 var ctx = CV.getContext('2d');
 var OV  = document.getElementById('ov');
 var LVB = document.getElementById('lvb');
 
+// ── Canvas size ───────────────────────────────────────
 var COLS = 21, ROWS = 21, T = 24;
 function resize() {
+  // HUD と D-pad の実際の高さを使ってキャンバス最大値を算出する（ボタンサイズ変更に追従）
+  var hudH = document.getElementById('hud').offsetHeight || 0;
+  var dpadWrap = document.getElementById('dpad-wrap');
+  var dpadH = dpadWrap ? dpadWrap.offsetHeight : 0;
   var mw = Math.min(window.innerWidth, 520);
-  var mh = window.innerHeight - 36 - (72 + 16 + 16);
+  var mh = Math.max(120, window.innerHeight - hudH - dpadH - 16); // 下の余白分を確保
   var sz = Math.min(mw, mh);
   T = Math.max(14, Math.floor(sz / COLS));
   CV.width  = T * COLS;
@@ -85,6 +92,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// ── Audio (生成はユーザー操作後) ──────────────────────
 var AC = null;
 function initAudio() {
   if (AC) return;
@@ -157,6 +165,8 @@ function playMusic(lv) {
   }, p.tm);
 }
 
+// ── MAP ───────────────────────────────────────────────
+// 0=壁 1=通路+宝石 2=通路のみ
 var MAP = [
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,0],
@@ -190,6 +200,7 @@ var TH = [
 var ECOLS = ['#38c038','#c03838','#3870e0','#707070'];
 var ENEMY_RT = 10, ITEM_RT = 12;
 
+// ── Draw ──────────────────────────────────────────────
 function drawPath(c, r, th) {
   ctx.fillStyle = ((c+r)%3===0) ? th.p2 : th.p1;
   ctx.fillRect(c*T, r*T, T, T);
@@ -273,11 +284,14 @@ function drawHero(px, py, dc, dr, armed, invT) {
   var mov=(dc!==0||dr!==0), bob=mov?Math.sin(now*11)*T*.05:0, leg=mov?Math.sin(now*11):0;
   var left=(dc<0||(dc===0)), r=T;
   ctx.save(); ctx.translate(px, py+bob);
+  // legs
   ctx.fillStyle='#2a4ea0';
   ctx.save(); ctx.translate(-r*.13,r*.18); ctx.rotate(leg*.28); ctx.fillRect(-r*.10,0,r*.20,r*.27); ctx.restore();
   ctx.fillStyle='#2a4ea0';
   ctx.save(); ctx.translate(r*.13,r*.18); ctx.rotate(-leg*.28); ctx.fillRect(-r*.10,0,r*.20,r*.27); ctx.restore();
+  // body
   ctx.fillStyle=armed?'#a81818':'#1848b8'; ctx.fillRect(-r*.26,-r*.19,r*.52,r*.40);
+  // arms
   var as=left?1:-1;
   ctx.fillStyle=armed?'#a81818':'#1848b8';
   ctx.save(); ctx.translate(-as*r*.32,-r*.11); ctx.rotate(as*.2+leg*.20);
@@ -295,10 +309,12 @@ function drawHero(px, py, dc, dr, armed, invT) {
   ctx.fillRect(-r*.09,0,r*.18,r*.26);
   ctx.fillStyle='#d8a060'; ctx.beginPath(); ctx.arc(0,r*.28,r*.11,0,Math.PI*2); ctx.fill();
   ctx.restore();
+  // head
   ctx.fillStyle='#d8a060'; ctx.fillRect(-r*.21,-r*.64,r*.42,r*.37);
   ctx.fillStyle='#1a1000';
   var ex=left?-r*.11:r*.01;
   ctx.fillRect(ex-r*.10,-r*.47,r*.11,r*.08); ctx.fillRect(ex+r*.06,-r*.47,r*.11,r*.08);
+  // helmet
   ctx.fillStyle=armed?'#a81818':'#483008';
   ctx.fillRect(-r*.23,-r*.76,r*.46,r*.14); ctx.fillRect(-r*.19,-r*.86,r*.38,r*.12);
   ctx.restore();
@@ -349,6 +365,7 @@ function drawArrow(px, py, dc, dr) {
   ctx.stroke(); ctx.globalAlpha=1; ctx.restore();
 }
 
+// ── Particles ─────────────────────────────────--------
 var PARTS = [];
 function spawnP(x,y,col,n) {
   for (var i=0;i<n;i++) {
@@ -376,6 +393,10 @@ function drawP() {
   }
   ctx.globalAlpha=1;
 }
+
+// ── Game ──────────────────────────────────────────────
+// （以降のゲームロジックは元コードのまま）
+// ...（中略せず元のロジックをすべて維持しています。下に続きます）
 
 var G = {
   on:false, level:1, score:0, hasLife:false,
@@ -473,6 +494,7 @@ var G = {
     if (this.sTimer>0) { this.sTimer-=dt; if(this.sTimer<=0)this.sTimer=0; }
     if (this.invT>0) this.invT-=dt;
 
+    // 制限時間
     this.timeLeft-=dt;
     if (this.timeLeft<=0) {
       this.timeLeft=0; this.alive=false; this.timeup=true;
@@ -480,6 +502,7 @@ var G = {
       this.phase='dead'; this.phaseTimer=2.5; stopMusic(); return;
     }
 
+    // 壁まで直進
     var dur=this.sTimer>0?this.moveDur*.55:this.moveDur;
     if (!this.moving) {
       if (this.pDc||this.pDr) {
@@ -508,10 +531,12 @@ var G = {
       if (pct>=1){this.px=tx;this.py=ty;this.moving=false;}
     }
 
+    // gems
     for (var i=0;i<this.gems.length;i++) {
       var g=this.gems[i];
       if (!g.eaten&&g.r===this.pr&&g.c===this.pc){g.eaten=true;this.score+=10;sGem();spawnP(this.px,this.py,TH[(this.level-1)%3].gem,4);}
     }
+    // items
     for (var i=0;i<this.items.length;i++) {
       var it=this.items[i];
       if (it.dead){it.respawnTimer-=dt;if(it.respawnTimer<=0)this.reviveItem(it);continue;}
@@ -523,6 +548,7 @@ var G = {
         else{this.sTimer=6;this.score+=30;sPotion();spawnP(this.px,this.py,'#60ff90',10);spawnT(this.px,this.py-T,'SPEED!','#60ff90');}
       }
     }
+    // enemies
     var self=this;
     for (var i=0;i<this.enemies.length;i++) {
       var e=this.enemies[i];
@@ -618,6 +644,7 @@ var G = {
   }
 };
 
+// ── Input ─────────────────────────────────────────────
 var swipeStart=null;
 CV.addEventListener('touchstart',function(e){
   e.preventDefault();
@@ -649,17 +676,22 @@ function regDpad(id,dc,dr){
 }
 regDpad('bU',0,-1); regDpad('bD',0,1); regDpad('bL',-1,0); regDpad('bR',1,0);
 
+// ── Overlay helper ───────────────────────────────────
 function showOv(title, sub, body, btnLabel) {
   OV.innerHTML =
     '<h1>'+title+'</h1>'+
     '<h2>'+sub+'</h2>'+
     '<p>'+body+'</p>'+
-    '<button id="startBtn" style="padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:Courier New,monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #183008;">'+btnLabel+'</button>';
+    '<button id="startBtn">'+btnLabel+'</button>';
   OV.style.display='flex';
-  document.getElementById('startBtn').addEventListener('click', startGame);
-  document.getElementById('startBtn').addEventListener('touchend', function(e){e.preventDefault();startGame();});
+  var b = document.getElementById('startBtn');
+  if (b) {
+    b.addEventListener('click', startGame);
+    b.addEventListener('touchend', function(e){e.preventDefault();startGame();});
+  }
 }
 
+// ── Loop ─────────────────────────────────────────────
 var last=0;
 function loop(ts){
   var dt=Math.min((ts-last)/1000,.05); last=ts;
@@ -668,6 +700,7 @@ function loop(ts){
 }
 requestAnimationFrame(loop);
 
+// ── Start ─────────────────────────────────────────────
 function startGame(){
   initAudio();
   if(AC&&AC.state==='suspended') AC.resume();
@@ -677,10 +710,15 @@ function startGame(){
   playMusic(1);
 }
 
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('startBtn').addEventListener('touchend', function(e){e.preventDefault();startGame();});
+// タイトルボタン登録（初期画面のボタン）
+var initialStart = document.getElementById('startBtn');
+if (initialStart) {
+  initialStart.addEventListener('click', startGame);
+  initialStart.addEventListener('touchend', function(e){e.preventDefault();startGame();});
+}
 
 })();
 </script>
+
 </body>
 </html>

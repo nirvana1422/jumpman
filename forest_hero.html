@@ -61,7 +61,7 @@ canvas{display:block;touch-action:none;}
       👾 スライム・アイテムは時間で復活！<br><br>
       <span style="color:#ffd040">矢印ボタン・スワイプ・矢印キーで操作</span>
     </p>
-    <button class="sbtn" onclick="startGame()">▶ 冒険開始！</button>
+    <button class="sbtn" id="startBtn">▶ 冒険開始！</button>
   </div>
 </div>
 <script>
@@ -534,12 +534,13 @@ btn.addEventListener(‘mousedown’,function(){if(G.on&&G.phase===‘play’)G.
 }
 dpadBtn(‘btn-up’,0,-1);dpadBtn(‘btn-down’,0,1);dpadBtn(‘btn-left’,-1,0);dpadBtn(‘btn-right’,1,0);
 
-function showOv(t,s,b,btn){OV.innerHTML=’<h1>’+t+’</h1><h2>’+s+’</h2><p>’+b+’</p><button class="sbtn" onclick="startGame()">▶ ‘+btn+’</button>’;OV.style.display=‘flex’;}
+function showOv(t,s,b,btn){OV.innerHTML=’<h1>’+t+’</h1><h2>’+s+’</h2><p>’+b+’</p><button class="sbtn" id="startBtn">▶ ‘+btn+’</button>’;OV.style.display=‘flex’;document.getElementById(‘startBtn’).addEventListener(‘click’,startGame);}
 
 var last=0;
 function loop(ts){var dt=Math.min((ts-last)/1000,.05);last=ts;if(G.on){G.update(dt);G.draw();}requestAnimationFrame(loop);}
 function startGame(){AC.resume();OV.style.display=‘none’;G.on=true;G.score=0;G.hasLife=false;G.init(1);playMusic(1);}
 requestAnimationFrame(loop);
+document.getElementById(‘startBtn’).addEventListener(‘click’,startGame);
 </script>
 
 </body>

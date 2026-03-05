@@ -51,7 +51,6 @@ let W,H;
 function resize(){W=gw.clientWidth;H=gw.clientHeight;cv.width=W;cv.height=H;bcv.width=W;bcv.height=H;}
 resize();window.addEventListener('resize',resize);
 
-// Audio
 let AC;
 function getAC(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();return AC;}
 function beep(f,d,t='square',v=0.1,dl=0){
@@ -78,7 +77,6 @@ const THEMES=[
 function startMusic(lv){if(mIv)clearInterval(mIv);mIv=THEMES[Math.min(lv-1,THEMES.length-1)]();}
 function stopMusic(){if(mIv){clearInterval(mIv);mIv=null;}}
 
-// Stars
 const STARS=Array.from({length:100},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.3+0.3,sp:Math.random()*0.2+0.08,a:Math.random()}));
 const BGT=[{top:'#000010',bot:'#000828',star:'#aaccff'},{top:'#0d0010',bot:'#250020',star:'#ffaaff'},{top:'#001008',bot:'#002818',star:'#aaffcc'}];
 let bgT=0;
@@ -90,7 +88,7 @@ function drawBg(){
 
 let gs='title',score=0,lives=3,level=1,kills=0;
 const KPL=20;
-let pl,buls,ebuls,enems,bars,items,parts;
+let pl,buls,ebuls,enems,items,parts;
 let eDir,sTm,esTm,iTm,eMoveTimer;
 let inv=false,invT=0,spd=false,spdT=0;
 let tL=false,tR=false;
@@ -109,8 +107,8 @@ function initGame(){
   pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.0006,color:'#00ffcc'};
   buls=[];ebuls=[];parts=[];items=[];
   sTm=0;esTm=0;iTm=260;inv=false;invT=0;spd=false;spdT=0;
-  eMoveTimer = 0;
-  spawnEnemies();initBars();
+  eMoveTimer=0;
+  spawnEnemies();
 }
 
 function spawnEnemies(){
@@ -123,12 +121,6 @@ function spawnEnemies(){
       color:r===0?'#ff4466':r<=2?'#ff9f00':'#00ddff',pts:r===0?30:r<=2?20:10});
 }
 
-function initBars(){
-  bars=[];
-  const n=4,bw=W*0.1,bh=H*0.028,gap=(W-n*bw)/(n+1);
-  for(let i=0;i<n;i++)bars.push({x:gap+i*(bw+gap),y:H-130,w:bw,h:bh,hp:5,mhp:5});
-}
-
 function update(dt){
   if(tL)pl.x-=pl.sp*dt;
   if(tR)pl.x+=pl.sp*dt;
@@ -136,7 +128,8 @@ function update(dt){
   if(inv){invT-=dt;if(invT<=0){inv=false;showN('');}}
   if(spd){spdT-=dt;if(spdT<=0){spd=false;showN('');}}
 
-  if(++sTm>=(spd?16:35)){sTm=0;buls.push({x:pl.x,y:pl.y-pl.h,w:3,h:14,sp:12,color:'#00ffcc'});snd.shoot();}
+  // 通常発射間隔を25に短縮（元35→少し速く）
+  if(++sTm>=(spd?16:25)){sTm=0;buls.push({x:pl.x,y:pl.y-pl.h,w:3,h:14,sp:12,color:'#00ffcc'});snd.shoot();}
   buls=buls.filter(b=>{b.y-=b.sp;return b.y>-20;});
   ebuls=ebuls.filter(b=>{b.y+=b.sp;return b.y<H+20;});
   items=items.filter(it=>{it.y+=1.6;it.rot=(it.rot||0)+0.05;return it.y<H+30;});
@@ -147,24 +140,22 @@ function update(dt){
   let minX=Infinity,maxX=-Infinity,maxY=-Infinity;
   alive.forEach(e=>{minX=Math.min(minX,e.x-e.w/2);maxX=Math.max(maxX,e.x+e.w/2);maxY=Math.max(maxY,e.y+e.h/2);});
 
-  // --- インベーダー風：時間間隔で一歩ずつ移動 ---
-  eMoveTimer += dt;
-  const moveInterval = Math.max(120, 700 - (level-1) * 40);
-  if(eMoveTimer >= moveInterval){
-    eMoveTimer = 0;
-    const stepX = Math.max(6, W * 0.03);
-    const stepY = Math.max(8, H * 0.03);
-    const nextMinX = minX + eDir * stepX;
-    const nextMaxX = maxX + eDir * stepX;
-    if(nextMaxX >= W - 12 || nextMinX <= 12){
-      alive.forEach(e => e.y += stepY);
-      eDir *= -1;
-      if(maxY + stepY >= pl.y - pl.h){ loseLv(); return; }
-    } else {
-      alive.forEach(e => { e.x += eDir * stepX; e.frt++; if(e.frt > 12){ e.fr = 1 - e.fr; e.frt = 0; } });
+  eMoveTimer+=dt;
+  const moveInterval=Math.max(120,700-(level-1)*40);
+  if(eMoveTimer>=moveInterval){
+    eMoveTimer=0;
+    const stepX=Math.max(6,W*0.03);
+    const stepY=Math.max(8,H*0.03);
+    const nextMinX=minX+eDir*stepX;
+    const nextMaxX=maxX+eDir*stepX;
+    if(nextMaxX>=W-12||nextMinX<=12){
+      alive.forEach(e=>e.y+=stepY);
+      eDir*=-1;
+      if(maxY+stepY>=pl.y-pl.h){loseLv();return;}
+    }else{
+      alive.forEach(e=>{e.x+=eDir*stepX;e.frt++;if(e.frt>12){e.fr=1-e.fr;e.frt=0;}});
     }
   }
-  // --- ここまでインベーダー風移動 ---
 
   if(maxY>=pl.y-pl.h){loseLv();return;}
 
@@ -173,42 +164,17 @@ function update(dt){
 
   if(--iTm<=0){iTm=280+Math.random()*380;const tp=['life','speed','inv'][Math.floor(Math.random()*3)];items.push({x:30+Math.random()*(W-60),y:-20,type:tp,rot:0});}
 
-  // 自機弾と敵の当たり判定
   buls.forEach(b=>{
     enems.forEach(e=>{
-      if(!e.alive||b.dead) return;
-      if(Math.abs(b.x-e.x)<e.w/2 && Math.abs(b.y-e.y)<e.h/2){
-        b.dead=true;
-        e.alive=false;
-        score+=e.pts;
-        kills++;
-        snd.explode();
-        spawnFx(e.x,e.y,e.color);
-        checkLv();
-        updUI();
+      if(!e.alive||b.dead)return;
+      if(Math.abs(b.x-e.x)<e.w/2&&Math.abs(b.y-e.y)<e.h/2){
+        b.dead=true;e.alive=false;score+=e.pts;kills++;
+        snd.explode();spawnFx(e.x,e.y,e.color);checkLv();updUI();
       }
     });
   });
-
-  // 自機弾とバリアの衝突判定（バリアで弾を消す）
-  buls.forEach(b=>{
-    if(b.dead) return;
-    bars.forEach(br=>{
-      if(br.hp<=0) return;
-      if(
-        b.x > br.x &&
-        b.x < br.x + br.w &&
-        b.y > br.y &&
-        b.y < br.y + br.h
-      ){
-        b.dead = true;
-      }
-    });
-  });
-
   buls=buls.filter(b=>!b.dead);
 
-  ebuls.forEach(b=>{bars.forEach(br=>{if(br.hp<=0)return;if(b.x>br.x&&b.x<br.x+br.w&&b.y>br.y&&b.y<br.y+br.h){b.dead=true;br.hp--;}});});
   ebuls=ebuls.filter(b=>!b.dead);
 
   if(!inv){ebuls.forEach(b=>{if(Math.abs(b.x-pl.x)<pl.w/2&&Math.abs(b.y-pl.y)<pl.h){b.dead=true;loseLv();}});ebuls=ebuls.filter(b=>!b.dead);}
@@ -222,21 +188,9 @@ function nextLv(){level++;bgT=Math.min(level-1,BGT.length-1);updUI();showLB();sn
 function checkLv(){const nl=Math.floor(kills/KPL)+1;if(nl>level){level=nl;bgT=Math.min(level-1,BGT.length-1);showLB();snd.lvlup();startMusic(level);enems.filter(e=>e.alive).forEach(e=>e.sp=0.55+(level-1)*0.22);updUI();}}
 function loseLv(){lives--;snd.hit();spawnFx(pl.x,pl.y,'#ff4466',22);updUI();if(lives<=0)gameOver();else{inv=true;invT=100;}}
 function applyItem(tp){
-  if(tp==='life'){
-    lives=Math.min(lives+1,5);
-    showN('♥ ライフ +1!');
-    updUI();
-  }else if(tp==='speed'){
-    spd=true;
-    // 変更：攻撃速度2倍の効果時間を延長（単位 ms）。以前は 600。
-    spdT=8000;
-    showN('⚡ 攻撃速度2倍! (持続約8秒)');
-  }else{
-    inv=true;
-    // 変更：無敵モードの効果時間を延長（単位 ms）。以前は 500。
-    invT=8000;
-    showN('★ 無敵モード！ (持続約8秒)');
-  }
+  if(tp==='life'){lives=Math.min(lives+1,5);showN('♥ ライフ +1!');updUI();}
+  else if(tp==='speed'){spd=true;spdT=8000;showN('⚡ 攻撃速度2倍! (持続約8秒)');}
+  else{inv=true;invT=8000;showN('★ 無敵モード！ (持続約8秒)');}
 }
 function spawnFx(x,y,col,n=12){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=Math.random()*4+1;parts.push({x,y,col,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:20+Math.random()*20,ml:40,r:Math.random()*3+1});}}
 function gameOver(){gs='gameover';stopMusic();const ol=document.getElementById('ov');ol.style.display='flex';ol.innerHTML=`<h1 style="color:#ff4466;text-shadow:0 0 20px #ff4466">GAME<br>OVER</h1><p style="color:#fff;font-size:10px">SCORE <span style="color:#00ffcc">${score}</span></p><p style="color:#888;font-size:7px">LEVEL ${level}</p><button class="btn" style="color:#ff4466" onclick="startGame()">▶ RETRY</button>`;}
@@ -246,8 +200,6 @@ let lTo;function showLB(){const el=document.getElementById('lB');el.textContent=
 
 function draw(){
   cx.clearRect(0,0,W,H);drawBg();
-  // Barriers
-  bars.forEach(br=>{if(br.hp<=0)return;const a=br.hp/br.mhp,cs=['#ff3333','#ff6600','#ffcc00','#88ff00','#00ffcc'],c=cs[Math.min(br.hp-1,4)];cx.globalAlpha=0.25+a*0.55;cx.fillStyle=c;cx.beginPath();cx.roundRect(br.x,br.y,br.w,br.h,4);cx.fill();cx.globalAlpha=1;cx.strokeStyle=c;cx.lineWidth=1.5;cx.strokeRect(br.x,br.y,br.w,br.h);for(let i=0;i<br.mhp;i++){cx.fillStyle=i<br.hp?'#00ffcc':'rgba(255,255,255,0.1)';cx.fillRect(br.x+2+i*(br.w-4)/br.mhp,br.y+br.h-4,(br.w-4)/br.mhp-1,3);}});
   // Player
   const p=pl,fl=inv&&Math.floor(Date.now()/90)%2===0;
   if(!fl){
@@ -289,20 +241,18 @@ function draw(){
   // Particles
   parts.forEach(p=>{cx.globalAlpha=p.life/p.ml;cx.fillStyle=p.col;cx.shadowColor=p.col;cx.shadowBlur=4;cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);cx.fill();});
   cx.globalAlpha=1;cx.shadowBlur=0;
-  // Scanlines
   cx.fillStyle='rgba(0,0,0,0.04)';for(let y=0;y<H;y+=4)cx.fillRect(0,y,W,2);
 }
 
 let lastT=0;
 function loop(ts=0){if(gs!=='playing')return;const dt=Math.min(ts-lastT,32);lastT=ts;update(dt);draw();requestAnimationFrame(loop);}
 
-// Input
-function getLeft(clientX){return clientX<gw.getBoundingClientRect().left+W/2;}
 cv.addEventListener('touchstart',e=>{e.preventDefault();getAC().resume();tL=false;tR=false;[...e.touches].forEach(t=>getLeft(t.clientX)?tL=true:tR=true);},{passive:false});
 cv.addEventListener('touchend',e=>{e.preventDefault();tL=false;tR=false;[...e.touches].forEach(t=>getLeft(t.clientX)?tL=true:tR=true);},{passive:false});
 cv.addEventListener('touchmove',e=>{e.preventDefault();tL=false;tR=false;[...e.touches].forEach(t=>getLeft(t.clientX)?tL=true:tR=true);},{passive:false});
 cv.addEventListener('mousedown',e=>{getAC().resume();getLeft(e.clientX)?tL=true:tR=true;});
 cv.addEventListener('mouseup',()=>{tL=false;tR=false;});
+function getLeft(clientX){return clientX<gw.getBoundingClientRect().left+W/2;}
 
 (function bgL(){if(gs==='title'){drawBg();requestAnimationFrame(bgL);}})();
 </script>

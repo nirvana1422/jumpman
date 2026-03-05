@@ -3,26 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>FOREST HERO</title>
+<title>FOREST HERO 2</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#1a3008;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;overflow:hidden;user-select:none;-webkit-user-select:none;}
+body{background:#0a0a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;overflow:hidden;user-select:none;-webkit-user-select:none;}
 #wrap{position:relative;display:flex;flex-direction:column;align-items:center;}
-#hud{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;color:#fff;font-size:11px;font-weight:bold;background:#1a3008;border-bottom:3px solid #4a9a20;flex-wrap:wrap;gap:2px;}
+#hud{width:100%;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;color:#fff;font-size:11px;font-weight:bold;background:#0a0a2e;border-bottom:3px solid #6040c0;flex-wrap:wrap;gap:2px;}
 canvas{display:block;touch-action:none;}
-#ctrl-wrap{position:relative;width:100%;background:#1a3008;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+#ctrl-wrap{position:relative;width:100%;background:#0a0a2e;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 #dpad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:4px;padding:10px;}
-.dpad-btn{display:flex;align-items:center;justify-content:center;background:#1e5010;border:3px solid #4a9a20;border-radius:10px;font-size:28px;color:#88d860;cursor:pointer;box-shadow:0 5px 0 #0d2a08;transition:transform 0.07s,box-shadow 0.07s;-webkit-tap-highlight-color:transparent;touch-action:none;}
-.dpad-btn:active,.dpad-btn.pressed{background:#2e7018;color:#ffe040;border-color:#ffe040;transform:translateY(3px);box-shadow:0 2px 0 #0d2a08;}
-.dpad-center{background:#0d2a08;border:none;box-shadow:none;pointer-events:none;}
+.dpad-btn{display:flex;align-items:center;justify-content:center;background:#1a1050;border:3px solid #6040c0;border-radius:10px;font-size:28px;color:#c080ff;cursor:pointer;box-shadow:0 5px 0 #08082a;transition:transform 0.07s,box-shadow 0.07s;-webkit-tap-highlight-color:transparent;touch-action:none;}
+.dpad-btn:active,.dpad-btn.pressed{background:#2a1880;color:#ffd700;border-color:#ffd700;transform:translateY(3px);box-shadow:0 2px 0 #08082a;}
+.dpad-center{background:#08082a;border:none;box-shadow:none;pointer-events:none;}
 .dpad-empty{background:transparent;border:none;box-shadow:none;pointer-events:none;}
-#ov{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,22,4,0.95);color:#f0e060;text-align:center;padding:16px;z-index:10;}
-#ov h1{font-size:clamp(20px,6vw,34px);color:#ffe040;text-shadow:2px 2px 0 #4a2800;margin-bottom:6px;}
-#ov h2{font-size:clamp(10px,3vw,14px);color:#88d030;margin-bottom:10px;}
-#ov p{font-size:clamp(9px,2.4vw,12px);color:#c8e890;line-height:2.0;margin-bottom:14px;}
-#startBtn{padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:'Courier New',monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #183008;display:block;}
-#startBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #183008;}
-#lvb{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#ffe040;font-size:clamp(14px,5vw,26px);font-weight:bold;background:rgba(8,22,4,0.92);padding:10px 20px;border:3px solid #68b828;pointer-events:none;z-index:9;opacity:0;transition:opacity 0.3s;white-space:nowrap;}
+#ov{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,4,20,0.96);color:#c080ff;text-align:center;padding:16px;z-index:10;}
+#ov h1{font-size:clamp(20px,6vw,34px);color:#ffd700;text-shadow:2px 2px 0 #4a2800,0 0 20px #ffd700;margin-bottom:6px;}
+#ov h2{font-size:clamp(10px,3vw,14px);color:#c080ff;margin-bottom:10px;}
+#ov p{font-size:clamp(9px,2.4vw,12px);color:#a080e0;line-height:2.0;margin-bottom:14px;}
+#startBtn{padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:'Courier New',monospace;font-weight:bold;background:#2a1070;color:#ffd700;border:3px solid #8060e0;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #08082a;display:block;}
+#startBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #08082a;}
+#lvb{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#ffd700;font-size:clamp(14px,5vw,26px);font-weight:bold;background:rgba(4,4,20,0.92);padding:10px 20px;border:3px solid #8060e0;pointer-events:none;z-index:9;opacity:0;transition:opacity 0.3s;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -30,29 +30,29 @@ canvas{display:block;touch-action:none;}
   <div id="hud">
     <span>LV.<span id="hLv">1</span></span>
     <span>SCORE:<span id="hSc">0</span></span>
-    <span id="hDot">💎0</span>
-    <span id="hTime" style="color:#ffe040">⏱90</span>
-    <span id="hLife">❤ON</span>
-    <span id="hSt" style="color:#ffe040"></span>
+    <span id="hDot">&#128142;0</span>
+    <span id="hTime" style="color:#ffd700">&#9201;90</span>
+    <span id="hLife">HP:0</span>
+    <span id="hSt" style="color:#ffd700"></span>
   </div>
   <canvas id="C"></canvas>
   <div id="ctrl-wrap">
     <div id="dpad">
       <div class="dpad-empty"></div>
-      <div class="dpad-btn" id="btn-up">▲</div>
+      <div class="dpad-btn" id="btn-up">&#9650;</div>
       <div class="dpad-empty"></div>
-      <div class="dpad-btn" id="btn-left">◀</div>
+      <div class="dpad-btn" id="btn-left">&#9664;</div>
       <div class="dpad-center"></div>
-      <div class="dpad-btn" id="btn-right">▶</div>
+      <div class="dpad-btn" id="btn-right">&#9654;</div>
       <div class="dpad-empty"></div>
-      <div class="dpad-btn" id="btn-down">▼</div>
+      <div class="dpad-btn" id="btn-down">&#9660;</div>
       <div class="dpad-empty"></div>
     </div>
   </div>
   <div id="lvb">FLOOR CLEAR!</div>
   <div id="ov">
-    <h1>&#127794; FOREST HERO &#127794;</h1>
-    <h2>&#8212; スライム討伐の旅 &#8212;</h2>
+    <h1>&#127794; FOREST HERO 2 &#127794;</h1>
+    <h2>&#8212; 深淵の森へ &#8212;</h2>
     <p>
       &#128142; 宝石を全部集めるとクリア！<br>
       &#9876;&#65039; 武器でスライムを倒せる！(8秒)<br>
@@ -89,7 +89,6 @@ function resize() {
   var w = CV.width;
   document.getElementById('wrap').style.width = w + 'px';
   CW.style.width = w + 'px';
-  // ボタンサイズをキャンバス幅に合わせてスケール
   var btnSize = Math.floor(Math.min(w / 4, DPAD_H * 0.88));
   var gap = Math.max(4, Math.floor(btnSize * 0.08));
   DPAD.style.gap = gap + 'px';
@@ -107,7 +106,6 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// 十字キー入力管理
 var dpadPressed = {up:false, down:false, left:false, right:false};
 
 function applyDpadState() {
@@ -243,12 +241,13 @@ var MAP = [
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 ];
 
+// テーマ: パープル系 / ゴールド系 / ダークティール系
 var TH = [
-{g1:'#4a9820',g2:'#3e8018',p1:'#c09040',p2:'#a87030',tA:'#2a6810',tB:'#3a8818',tC:'#50b020',tr:'#6a3808',gem:'#40d8ff',gem2:'#20b0e0'},
-{g1:'#b07818',g2:'#986010',p1:'#d0a040',p2:'#b88830',tA:'#a83808',tB:'#c85818',tC:'#e88030',tr:'#582008',gem:'#ff68b8',gem2:'#e04898'},
-{g1:'#182840',g2:'#102030',p1:'#506880',p2:'#405870',tA:'#182050',tB:'#283870',tC:'#3850a0',tr:'#181830',gem:'#78ff98',gem2:'#48d068'},
+  {g1:'#0e0a30',g2:'#0a0828',p1:'#3a2880',p2:'#2e1e68',tA:'#1a1050',tB:'#2a1880',tC:'#4030b0',tr:'#180e40',gem:'#ffd700',gem2:'#e0a800'},
+  {g1:'#1a0a00',g2:'#140800',p1:'#8a4a00',p2:'#703a00',tA:'#6a2000',tB:'#8a3800',tC:'#c06000',tr:'#3a1000',gem:'#c080ff',gem2:'#9050e0'},
+  {g1:'#001a1a',g2:'#001414',p1:'#005858',p2:'#004444',tA:'#003030',tB:'#005050',tC:'#008080',tr:'#001818',gem:'#ff6ec7',gem2:'#e040a0'},
 ];
-var ECOLS = ['#38c038','#c03838','#3870e0','#707070'];
+var ECOLS = ['#c060ff','#ff6ec7','#60c0ff','#ffd700'];
 var ENEMY_RT = 10, ITEM_RT = 12;
 
 function drawPath(c, r, th) {
@@ -278,17 +277,17 @@ function drawGem(px, py, th) {
 function drawSword(px, py) {
   var now=Date.now()/1000, bob=Math.sin(now*4)*T*.07, r=T*.3;
   ctx.save(); ctx.translate(px, py+bob);
-  ctx.strokeStyle='#ffd040'; ctx.lineWidth=2; ctx.shadowColor='#ffd040'; ctx.shadowBlur=12;
+  ctx.strokeStyle='#c080ff'; ctx.lineWidth=2; ctx.shadowColor='#c080ff'; ctx.shadowBlur=12;
   ctx.beginPath(); ctx.arc(0,0,r*.54,0,Math.PI*2); ctx.stroke();
   ctx.shadowBlur=0;
   ctx.fillStyle='#dce8ff'; ctx.fillRect(-r*.10,-r*.72,r*.20,r*.72);
-  ctx.fillStyle='#c8a010'; ctx.fillRect(-r*.32,-r*.06,r*.64,r*.14);
+  ctx.fillStyle='#8060c0'; ctx.fillRect(-r*.32,-r*.06,r*.64,r*.14);
   ctx.restore();
 }
 function drawHeart(px, py) {
   var now=Date.now()/1000, bob=Math.sin(now*5)*T*.06, s=T*.13;
   ctx.save(); ctx.translate(px, py+bob);
-  ctx.shadowColor='#ff3355'; ctx.shadowBlur=10; ctx.fillStyle='#ff2244';
+  ctx.shadowColor='#ff6ec7'; ctx.shadowBlur=10; ctx.fillStyle='#ff6ec7';
   ctx.beginPath(); ctx.moveTo(0,s*1.8);
   ctx.bezierCurveTo(-s*.2,s*3.5,-s*4.2,s*3.2,-s*4.2,s*.8);
   ctx.bezierCurveTo(-s*4.2,-s*1.6,-s*1.0,-s*2.4,0,-s*.8);
@@ -299,15 +298,15 @@ function drawHeart(px, py) {
 function drawPotion(px, py) {
   var now=Date.now()/1000, bob=Math.sin(now*6)*T*.07, r=T*.28;
   ctx.save(); ctx.translate(px, py+bob);
-  ctx.shadowColor='#28ff60'; ctx.shadowBlur=10;
-  ctx.fillStyle='#8a5520'; ctx.fillRect(-r*.22,-r*.82,r*.44,r*.26);
-  ctx.fillStyle='rgba(10,200,60,.8)'; ctx.beginPath(); ctx.ellipse(0,r*.15,r*.52,r*.62,0,0,Math.PI*2); ctx.fill();
+  ctx.shadowColor='#c080ff'; ctx.shadowBlur=10;
+  ctx.fillStyle='#5a3080'; ctx.fillRect(-r*.22,-r*.82,r*.44,r*.26);
+  ctx.fillStyle='rgba(160,80,255,.8)'; ctx.beginPath(); ctx.ellipse(0,r*.15,r*.52,r*.62,0,0,Math.PI*2); ctx.fill();
   ctx.shadowBlur=0; ctx.restore();
 }
 function drawGhost(px, py, cd) {
   var now=Date.now()/1000, a=0.3+Math.abs(Math.sin(now*3))*0.4;
   ctx.save(); ctx.translate(px, py); ctx.globalAlpha=a*0.7;
-  ctx.fillStyle='#aaaaee';
+  ctx.fillStyle='#9090cc';
   ctx.beginPath(); ctx.arc(0,0,T*.22,Math.PI,0); ctx.lineTo(T*.22,T*.18);
   for (var i=3;i>=0;i--) ctx.lineTo(T*.22-T*.11*i, T*.08+Math.sin(i+now*4)*T*.10);
   ctx.lineTo(-T*.22,T*.18); ctx.closePath(); ctx.fill();
@@ -320,9 +319,9 @@ function drawGhost(px, py, cd) {
 function drawItemGhost(px, py, cd) {
   var now=Date.now()/1000, a=0.25+Math.abs(Math.sin(now*4))*0.3;
   ctx.save(); ctx.translate(px, py); ctx.globalAlpha=a;
-  ctx.strokeStyle='#ffe040'; ctx.lineWidth=2;
+  ctx.strokeStyle='#c080ff'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.arc(0,0,T*.25,0,Math.PI*2); ctx.stroke();
-  ctx.globalAlpha=0.85; ctx.fillStyle='#ffe040';
+  ctx.globalAlpha=0.85; ctx.fillStyle='#c080ff';
   ctx.font = 'bold ' + Math.max(8,Math.floor(T*.36)) + 'px monospace';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(Math.ceil(cd), 0, 0);
@@ -338,25 +337,25 @@ function drawHero(px, py, dc, dr, armed, invT, warping) {
   var mov=(dc!==0||dr!==0), bob=mov?Math.sin(now*11)*T*.05:0, leg=mov?Math.sin(now*11):0;
   var left=(dc<0||(dc===0)), r=T;
   ctx.save(); ctx.translate(px, py+bob);
-  if (warping) { ctx.shadowColor='#80d0ff'; ctx.shadowBlur=18; }
-  ctx.fillStyle='#2a4ea0';
+  if (warping) { ctx.shadowColor='#c080ff'; ctx.shadowBlur=18; }
+  ctx.fillStyle='#3a1870';
   ctx.save(); ctx.translate(-r*.13,r*.18); ctx.rotate(leg*.28); ctx.fillRect(-r*.10,0,r*.20,r*.27); ctx.restore();
-  ctx.fillStyle='#2a4ea0';
+  ctx.fillStyle='#3a1870';
   ctx.save(); ctx.translate(r*.13,r*.18); ctx.rotate(-leg*.28); ctx.fillRect(-r*.10,0,r*.20,r*.27); ctx.restore();
-  ctx.fillStyle=armed?'#a81818':'#1848b8'; ctx.fillRect(-r*.26,-r*.19,r*.52,r*.40);
+  ctx.fillStyle=armed?'#701870':'#5a28c0'; ctx.fillRect(-r*.26,-r*.19,r*.52,r*.40);
   var as=left?1:-1;
-  ctx.fillStyle=armed?'#a81818':'#1848b8';
+  ctx.fillStyle=armed?'#701870':'#5a28c0';
   ctx.save(); ctx.translate(-as*r*.32,-r*.11); ctx.rotate(as*.2+leg*.20);
   ctx.fillRect(-r*.09,0,r*.18,r*.26);
   ctx.fillStyle='#d8a060'; ctx.beginPath(); ctx.arc(0,r*.28,r*.11,0,Math.PI*2); ctx.fill();
   if (armed) {
-    ctx.shadowColor='#ffe060'; ctx.shadowBlur=10;
+    ctx.shadowColor='#c080ff'; ctx.shadowBlur=10;
     ctx.fillStyle='#dce8ff'; ctx.fillRect(-r*.06,-r*.78,r*.12,r*.70);
-    ctx.fillStyle='#c89808'; ctx.fillRect(-r*.26,-r*.04,r*.52,r*.10);
+    ctx.fillStyle='#8060c0'; ctx.fillRect(-r*.26,-r*.04,r*.52,r*.10);
     ctx.shadowBlur=0;
   }
   ctx.restore();
-  ctx.fillStyle=armed?'#a81818':'#1848b8';
+  ctx.fillStyle=armed?'#701870':'#5a28c0';
   ctx.save(); ctx.translate(as*r*.32,-r*.11); ctx.rotate(-as*.2-leg*.20);
   ctx.fillRect(-r*.09,0,r*.18,r*.26);
   ctx.fillStyle='#d8a060'; ctx.beginPath(); ctx.arc(0,r*.28,r*.11,0,Math.PI*2); ctx.fill();
@@ -366,7 +365,7 @@ function drawHero(px, py, dc, dr, armed, invT, warping) {
   ctx.fillStyle='#1a1000';
   var ex=left?-r*.11:r*.01;
   ctx.fillRect(ex-r*.10,-r*.47,r*.11,r*.08); ctx.fillRect(ex+r*.06,-r*.47,r*.11,r*.08);
-  ctx.fillStyle=armed?'#a81818':'#483008';
+  ctx.fillStyle=armed?'#701870':'#2a1060';
   ctx.fillRect(-r*.23,-r*.76,r*.46,r*.14); ctx.fillRect(-r*.19,-r*.86,r*.38,r*.12);
   ctx.restore();
 }
@@ -387,7 +386,7 @@ function drawSlime(px, py, col, frightenT) {
     ctx.fillStyle='#fff';
     ctx.beginPath(); ctx.ellipse(-r*.26,-r*.14,r*.17,r*.20,0,0,Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(r*.26,-r*.14,r*.17,r*.20,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=col==='#707070'?'#333':'#cc1010';
+    ctx.fillStyle=col==='#ffd700'?'#806000':'#6010a0';
     ctx.beginPath(); ctx.arc(-r*.26,-r*.16,r*.09,0,Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(r*.26,-r*.16,r*.09,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='#000';
@@ -408,7 +407,7 @@ function drawArrow(px, py, dc, dr) {
   var now=Date.now()/1000, a=0.42+Math.sin(now*6)*0.26;
   ctx.save(); ctx.globalAlpha=a; ctx.translate(px, py);
   var ax=dc*T*.68, ay=dr*T*.68, angle=Math.atan2(ay,ax);
-  ctx.strokeStyle='#ffe040'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.strokeStyle='#ffd700'; ctx.lineWidth=3; ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ax,ay); ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(ax,ay); ctx.lineTo(ax-Math.cos(angle-.5)*T*.20, ay-Math.sin(angle-.5)*T*.20);
@@ -503,7 +502,7 @@ var G = {
     e.r=cell.r; e.c=cell.c; e.px=cell.c*T+T/2; e.py=cell.r*T+T/2;
     e.dc=0; e.dr=0; e.moving=false; e.moveT=0;
     e.frightenT=0; e.alive=true; e.dead=false; e.respawnTimer=0; e.moveDur=T/spd;
-    sSpawn(); spawnT(e.px,e.py-T,'REVIVE','#aaffaa');
+    sSpawn(); spawnT(e.px,e.py-T,'REVIVE','#c0a0ff');
   },
   reviveItem: function(it) {
     var cell=this.randCell(5);
@@ -529,8 +528,8 @@ var G = {
     if (this.phase==='dead') {
       updP(dt); this.phaseTimer-=dt;
       if (this.phaseTimer<=0) {
-        if (this.timeup) showOv('TIME UP!','– 時間切れ –','宝石を集めきれなかった<br>SCORE:'+this.score,'再挑戦！');
-        else showOv('GAME OVER','– 勇者は倒れた –','スライムに敗北<br>SCORE:'+this.score,'再挑戦！');
+        if (this.timeup) showOv('TIME UP!','&#8212; 時間切れ &#8212;','宝石を集めきれなかった<br>SCORE:'+this.score,'再挑戦！');
+        else showOv('GAME OVER','&#8212; 勇者は倒れた &#8212;','スライムに敗北<br>SCORE:'+this.score,'再挑戦！');
         stopMusic(); this.on=false;
       }
       return;
@@ -542,7 +541,7 @@ var G = {
     this.timeLeft-=dt;
     if (this.timeLeft<=0) {
       this.timeLeft=0; this.alive=false; this.timeup=true;
-      sDie(); spawnP(this.px,this.py,'#ff8800',24);
+      sDie(); spawnP(this.px,this.py,'#c080ff',24);
       this.phase='dead'; this.phaseTimer=2.5; stopMusic(); return;
     }
     var dur=this.sTimer>0?this.moveDur*.55:this.moveDur;
@@ -550,7 +549,6 @@ var G = {
       if (this.warping && this.pr===10) {
         if (this.pc > 0 && this.pc < COLS-1 && this.map[this.pr][this.pc] !== 2) { this.warping = false; }
       } else if (this.warping && this.pr !== 10) { this.warping = false; }
-
       if (this.pDc||this.pDr) {
         var prevC2 = this.pc;
         var nr2=this.pr+this.pDr, nc2=this.pc+this.pDc;
@@ -592,9 +590,9 @@ var G = {
       if (!it.active) continue;
       if (it.r===this.pr&&it.c===this.pc) {
         it.active=false; it.dead=true; it.respawnTimer=ITEM_RT;
-        if (it.type==='weapon'){this.wTimer=8;this.armed=true;this.invT=8;this.score+=50;sWeapon();for(var j=0;j<this.enemies.length;j++)if(this.enemies[j].alive)this.enemies[j].frightenT=8;spawnP(this.px,this.py,'#f0d060',14);spawnT(this.px,this.py-T,'ARMED!','#f0d060');}
-        else if(it.type==='life'){this.hasLife=true;this.score+=30;sLife();spawnP(this.px,this.py,'#ff6688',10);spawnT(this.px,this.py-T,'LIFE!','#ff8888');}
-        else{this.sTimer=6;this.score+=30;sPotion();spawnP(this.px,this.py,'#60ff90',10);spawnT(this.px,this.py-T,'SPEED!','#60ff90');}
+        if (it.type==='weapon'){this.wTimer=8;this.armed=true;this.invT=8;this.score+=50;sWeapon();for(var j=0;j<this.enemies.length;j++)if(this.enemies[j].alive)this.enemies[j].frightenT=8;spawnP(this.px,this.py,'#c080ff',14);spawnT(this.px,this.py-T,'ARMED!','#c080ff');}
+        else if(it.type==='life'){this.hasLife=true;this.score+=30;sLife();spawnP(this.px,this.py,'#ff6ec7',10);spawnT(this.px,this.py-T,'LIFE!','#ff6ec7');}
+        else{this.sTimer=6;this.score+=30;sPotion();spawnP(this.px,this.py,'#a060ff',10);spawnT(this.px,this.py-T,'SPEED!','#a060ff');}
       }
     }
     var self=this;
@@ -633,10 +631,10 @@ var G = {
         if (e.frightenT>0) {
           e.alive=false; e.dead=true; e.respawnTimer=ENEMY_RT;
           this.score+=200; this.timeLeft+=5;
-          sKill(); spawnP(e.px,e.py,e.col,20); spawnT(e.px,e.py-T,'+200 +5s','#ffe060');
+          sKill(); spawnP(e.px,e.py,e.col,20); spawnT(e.px,e.py-T,'+200 +5s','#ffd700');
         } else if (this.invT<=0 && !this.warping) {
-          if (this.hasLife){this.hasLife=false;this.invT=2.5;sDie();spawnP(this.px,this.py,'#ff4466',8);spawnT(this.px,this.py-T,'LIFE!','#ff8888');}
-          else{this.alive=false;sDie();spawnP(this.px,this.py,'#ff4466',24);this.phase='dead';this.phaseTimer=2.5;stopMusic();}
+          if (this.hasLife){this.hasLife=false;this.invT=2.5;sDie();spawnP(this.px,this.py,'#ff6ec7',8);spawnT(this.px,this.py-T,'LIFE!','#ff6ec7');}
+          else{this.alive=false;sDie();spawnP(this.px,this.py,'#c080ff',24);this.phase='dead';this.phaseTimer=2.5;stopMusic();}
         }
       }
     }
@@ -660,7 +658,7 @@ var G = {
     var tEl=document.getElementById('hTime');
     var t=Math.ceil(this.timeLeft);
     tEl.textContent=t+'s';
-    tEl.style.color=t<=10?'#ff4444':t<=20?'#ffaa00':'#ffe040';
+    tEl.style.color=t<=10?'#ff4444':t<=20?'#ffaa00':'#ffd700';
     var st='';
     if(this.warping) st='WARP!';
     else if(this.wTimer>0)st='ARM'+this.wTimer.toFixed(0)+'s';
@@ -702,9 +700,6 @@ document.addEventListener('keydown',function(e){
   else if(k==='ArrowUp'||k==='w'){G.setDir(0,-1);e.preventDefault();}
   else if(k==='ArrowDown'||k==='s'){G.setDir(0,1);e.preventDefault();}
 });
-document.addEventListener('keyup',function(e){
-  // キーボードは押しっぱなし対応不要（ゲームロジックが方向を保持）
-});
 
 var swipeStart=null;
 CV.addEventListener('touchstart',function(e){
@@ -728,7 +723,7 @@ function showOv(title, sub, body, btnLabel) {
     '<h1>'+title+'</h1>'+
     '<h2>'+sub+'</h2>'+
     '<p>'+body+'</p>'+
-    '<button id="startBtn" style="padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:Courier New,monospace;font-weight:bold;background:#386010;color:#ffe040;border:3px solid #68b828;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #183008;">'+btnLabel+'</button>';
+    '<button id="startBtn" style="padding:10px 36px;font-size:clamp(13px,4vw,17px);font-family:Courier New,monospace;font-weight:bold;background:#2a1070;color:#ffd700;border:3px solid #8060e0;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 0 #08082a;">'+btnLabel+'</button>';
   OV.style.display='flex';
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('startBtn').addEventListener('touchend', function(e){e.preventDefault();startGame();});

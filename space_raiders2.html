@@ -129,7 +129,7 @@ function update(dt){
   pl.x=Math.max(pl.w/2,Math.min(W-pl.w/2,pl.x));
   if(inv){invT-=dt;if(invT<=0){inv=false;showN('');}}
   if(spd){spdT-=dt;if(spdT<=0){spd=false;showN('');}}
-  if(++sTm>=(spd?16:35)){sTm=0;buls.push({x:pl.x,y:pl.y-pl.h,w:3,h:14,sp:12,color:'#c87fff',dead:false});snd.shoot();}
+  if(++sTm>=(spd?16:25)){sTm=0;buls.push({x:pl.x,y:pl.y-pl.h,w:3,h:14,sp:12,color:'#c87fff',dead:false});snd.shoot();}
   var i,j,b,e,br,it;
   for(i=buls.length-1;i>=0;i--){buls[i].y-=buls[i].sp;if(buls[i].y<-20)buls.splice(i,1);}
   for(i=ebuls.length-1;i>=0;i--){ebuls[i].y+=ebuls[i].sp;if(ebuls[i].y>H+20)ebuls.splice(i,1);}

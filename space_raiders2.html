@@ -137,7 +137,7 @@ function reviveOneBar(){
 function spawnUfo(){
   var dir=Math.random()<0.5?1:-1;
   var uw=W*0.09,uh=W*0.038;
-  ufo={x:dir===1?-uw:W+uw,y:H*0.07,w:uw,h:uh,sp:W* 0.0005,dir:dir,alive:true,pulse:0};
+  ufo={x:dir===1?-uw:W+uw,y:H*0.07,w:uw,h:uh,sp:W* 0.0003,dir:dir,alive:true,pulse:0};
 }
 
 function update(dt){

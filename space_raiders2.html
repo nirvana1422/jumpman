@@ -110,7 +110,7 @@ document.getElementById('sBtn').addEventListener('click',startGame);
 
 function initGame(){
   var pw=Math.min(W,480)*0.07;
-  pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.0015,color:'#c87fff'};
+  pl={x:W/2,y:H-68,w:pw,h:pw*0.55,sp:W*0.0006,color:'#c87fff'};
   buls=[];ebuls=[];parts=[];items=[];sTm=0;esTm=0;iTm=260;inv=false;invT=0;spd=false;spdT=0;eMoveTimer=0;
   ufo=null;ufoTm=0;
   spawnEnemies();initBars();

@@ -149,7 +149,6 @@ function update(dt){
   if(++esTm>=sr){esTm=0;var sh=alive[Math.floor(Math.random()*alive.length)];if(sh){ebuls.push({x:sh.x,y:sh.y+sh.h/2,w:4,h:11,sp:3.5+level*0.5,color:'#ff6ec7',dead:false});snd.eshoot();}}
   if(--iTm<=0){iTm=280+Math.random()*380;var tps=['life','speed','inv'];items.push({x:30+Math.random()*(W-60),y:-20,type:tps[Math.floor(Math.random()*3)],rot:0});}
   for(i=0;i<buls.length;i++){b=buls[i];if(b.dead)continue;for(j=0;j<enems.length;j++){e=enems[j];if(!e.alive)continue;if(Math.abs(b.x-e.x)<e.w/2&&Math.abs(b.y-e.y)<e.h/2){b.dead=true;e.alive=false;score+=e.pts;kills++;snd.explode();spawnFx(e.x,e.y,e.color);checkLv();updUI();break;}}}
-  for(i=0;i<buls.length;i++){b=buls[i];if(b.dead)continue;for(j=0;j<bars.length;j++){br=bars[j];if(br.hp<=0)continue;if(b.x>br.x&&b.x<br.x+br.w&&b.y>br.y&&b.y<br.y+br.h){b.dead=true;break;}}}
   for(i=buls.length-1;i>=0;i--)if(buls[i].dead)buls.splice(i,1);
   for(i=0;i<ebuls.length;i++){b=ebuls[i];if(b.dead)continue;for(j=0;j<bars.length;j++){br=bars[j];if(br.hp<=0)continue;if(b.x>br.x&&b.x<br.x+br.w&&b.y>br.y&&b.y<br.y+br.h){b.dead=true;br.hp--;break;}}}
   for(i=ebuls.length-1;i>=0;i--)if(ebuls[i].dead)ebuls.splice(i,1);

@@ -91,6 +91,7 @@ function seShoot(){tone(1047,'square',0.03,0.09);tone(1400,'square',0.025,0.07,0
 function seLvUp(){[330,440,554,660,784,880,1047].forEach(function(f,i){tone(f,'square',0.14,0.16,i*0.06);});}
 function seStart(){[262,330,392,523,659,784,1047].forEach(function(f,i){tone(f,'square',0.14,0.16,i*0.07);});}
 function seStormp(){tone(300,'square',0.06,0.18);tone(150,'sine',0.1,0.22,0.02);}
+function seGyaru(){[880,1047,1320,1047,880,784,880].forEach(function(f,i){tone(f,'square',0.08,0.15,i*0.05);});}
 
 var bgmLevel=-1,bgmTimer=null;
 var SONGS=[
@@ -121,6 +122,14 @@ var SONGS=[
     mel:[[988,0.06],[0,0.03],[988,0.06],[1047,0.06],[988,0.06],[880,0.06],[784,0.06],[0,0.03],[784,0.06],[831,0.06],[784,0.06],[698,0.06],[659,0.06],[0,0.03],[659,0.06],[698,0.06],[784,0.06],[0,0.03],[880,0.08],[0,0.04],[988,0.06],[1047,0.06],[1175,0.06],[0,0.03],[1047,0.06],[988,0.06],[880,0.06],[0,0.03],[784,0.06],[698,0.06],[659,0.06],[622,0.06],[0,0.03],[659,0.06],[698,0.06],[784,0.06],[831,0.06],[880,0.06],[0,0.03],[784,0.06],[0,0.03],[740,0.06],[784,0.06],[831,0.06],[880,0.06],[988,0.06],[1047,0.06],[988,0.06],[880,0.06],[784,0.12],[0,0.08]],
     bas:[[82,0.08],[0,0.04],[82,0.08],[0,0.04],[98,0.08],[0,0.04],[82,0.08],[0,0.04],[73,0.08],[0,0.04],[73,0.08],[0,0.04],[82,0.08],[0,0.04],[69,0.08],[0,0.04]],
     mt:'sawtooth',mv:0.075,bt:'sawtooth',bv:0.1,ki:0.2,sn:0.4,ha:0.1
+  },
+  // LV4: ギャルテクノ風ユーロビート
+  {
+    mel:[[1047,0.06],[0,0.03],[1047,0.06],[1175,0.06],[1047,0.06],[0,0.03],[988,0.06],[880,0.06],[0,0.03],[880,0.06],[988,0.06],[1047,0.06],[0,0.03],[1047,0.09],[0,0.03],
+         [784,0.06],[0,0.03],[784,0.06],[880,0.06],[988,0.06],[0,0.03],[1047,0.06],[1175,0.06],[0,0.03],[1175,0.09],[0,0.03],[1047,0.06],[988,0.06],[880,0.06],[0,0.03],
+         [1320,0.06],[0,0.03],[1320,0.06],[1175,0.06],[1047,0.06],[0,0.03],[988,0.06],[880,0.06],[784,0.06],[0,0.03],[880,0.06],[988,0.06],[1047,0.12],[0,0.06],[880,0.12],[0,0.06]],
+    bas:[[130,0.1],[0,0.05],[130,0.07],[0,0.03],[164,0.1],[0,0.05],[130,0.07],[0,0.03],[110,0.1],[0,0.05],[123,0.07],[0,0.03],[130,0.1],[0,0.05],[110,0.07],[0,0.03]],
+    mt:'square',mv:0.08,bt:'sawtooth',bv:0.1,ki:0.15,sn:0.3,ha:0.075
   }
 ];
 
@@ -156,6 +165,7 @@ var THEMES=[
   {name:'STAGE 2',skyT:'#001a00',skyB:'#002800',gnd:'#003300',gndE:'#88ff44',acc:'#88ff44',stars:false},
   {name:'STAGE 3',skyT:'#1a0500',skyB:'#2a0a00',gnd:'#3a1000',gndE:'#ff6600',acc:'#ff6600',stars:false},
   {name:'STAGE 4',skyT:'#000010',skyB:'#00001a',gnd:'#0a0030',gndE:'#aa44ff',acc:'#aa44ff',stars:true},
+  {name:'GYARU STAGE',skyT:'#1a0010',skyB:'#2d0022',gnd:'#1a0010',gndE:'#ff44cc',acc:'#ffdd00',stars:true},
 ];
 
 var state='title',frame=0,titleFrame=0;
@@ -179,17 +189,21 @@ var stars=[];
 for(var _si=0;_si<70;_si++)
   stars.push({x:Math.random()*W,y:10+Math.random()*(H*0.55),r:Math.random()*1.4+0.3,tw:Math.random()*Math.PI*2});
 
-var LEVEL_THRESHOLDS=[0,500,1200,2500,5000];
-function getTheme(){if(score>=2500)return 3;if(score>=1200)return 2;if(score>=500)return 1;return 0;}
+var LEVEL_THRESHOLDS=[0,500,1200,2500,5000,9000];
+function getTheme(){if(score>=9000)return 4;if(score>=2500)return 3;if(score>=1200)return 2;if(score>=500)return 1;return 0;}
 function checkLevelUp(){
   var newLv=1;
   for(var i=LEVEL_THRESHOLDS.length-1;i>=0;i--){if(score>=LEVEL_THRESHOLDS[i]){newLv=i+1;break;}}
-  if(newLv>level){level=newLv;levelUpTimer=90;seLvUp();try{playBGM(getTheme());}catch(e){}}
+  if(newLv>level){
+    level=newLv;levelUpTimer=90;seLvUp();
+    if(level>=5)seGyaru();
+    try{playBGM(getTheme());}catch(e){}
+  }
 }
 
 function genTerrain(){
   var lv=getTheme(),lastPt=terrainPts[terrainPts.length-1]||{x:0,y:BASE_Y},r=Math.random();
-  var holeProb=[0.08,0.15,0.22,0.3][lv],slopeProb=[0.2,0.28,0.35,0.4][lv],segs=[];
+  var holeProb=[0.08,0.15,0.22,0.3,0.18][lv],slopeProb=[0.2,0.28,0.35,0.4,0.3][lv],segs=[];
   if(r<holeProb){
     var hw=55+Math.random()*40+lv*10;
     segs.push({dx:35,dy:0},{dx:8,dy:130},{dx:hw,dy:0,isHole:true},{dx:8,dy:-130},{dx:45,dy:0});
@@ -334,8 +348,27 @@ function drawBG(){
   var th=THEMES[getTheme()];
   var grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,th.skyT);grad.addColorStop(1,th.skyB);
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+
+  // ギャルステージ：ネオンハート＆星をばら撒く
+  if(level>=5){
+    var gf=frame*0.02;
+    for(var gi=0;gi<8;gi++){
+      var gx=(gi*55+frame*0.4)%W,gy=30+gi*18+Math.sin(gf+gi)*8;
+      ctx.globalAlpha=0.18+0.1*Math.sin(gf*2+gi);
+      ctx.fillStyle=gi%2===0?'#ff44cc':'#ffdd00';
+      ctx.font='10px serif';ctx.textAlign='center';
+      ctx.fillText(gi%3===0?'♥':'★',gx,gy);
+    }
+    ctx.globalAlpha=1;ctx.textAlign='left';
+  }
+
   if(th.stars){
-    stars.forEach(function(s){s.tw+=0.02;ctx.globalAlpha=0.25+0.75*Math.abs(Math.sin(s.tw));ctx.fillStyle='#ffddff';ctx.fillRect(s.x|0,s.y|0,s.r<1?1:2,s.r<1?1:2);});
+    stars.forEach(function(s){
+      s.tw+=0.02;
+      ctx.globalAlpha=0.25+0.75*Math.abs(Math.sin(s.tw));
+      ctx.fillStyle=level>=5?'#ffdd00':'#ffddff';
+      ctx.fillRect(s.x|0,s.y|0,s.r<1?1:2,s.r<1?1:2);
+    });
     ctx.globalAlpha=1;
   }
   var scrollX=P.worldX-P.x;
@@ -359,7 +392,9 @@ function drawTerrain(){
   ctx.fillStyle=th.gnd;ctx.fill();
   ctx.beginPath();ctx.moveTo((terrainPts[0].x-scrollX)|0,(terrainPts[0].y-camY)|0);
   for(var j=1;j<terrainPts.length;j++)ctx.lineTo((terrainPts[j].x-scrollX)|0,(terrainPts[j].y-camY)|0);
-  ctx.strokeStyle=th.gndE;ctx.lineWidth=3;ctx.shadowColor=th.gndE;ctx.shadowBlur=7;ctx.stroke();ctx.shadowBlur=0;
+  // ギャルステージはネオンピンクのライン
+  var edgeCol=level>=5?'#ff44cc':th.gndE;
+  ctx.strokeStyle=edgeCol;ctx.lineWidth=3;ctx.shadowColor=edgeCol;ctx.shadowBlur=level>=5?14:7;ctx.stroke();ctx.shadowBlur=0;
   for(var hi=0;hi<terrainPts.length-1;hi++){
     if(terrainPts[hi].isHole){
       var hx1=(terrainPts[hi].x-scrollX)|0,hx2=(terrainPts[hi+1].x-scrollX)|0;
@@ -429,57 +464,154 @@ function drawSkateboard(ox,oy){
   ctx.globalAlpha=1;
 }
 
+// ギャルスケボー（デコ）
+function drawGyaruSkateboard(ox,oy){
+  // デッキ（ピンク）
+  ctx.fillStyle='#ff44aa';
+  ctx.beginPath();
+  if(ctx.roundRect){ctx.roundRect(ox-18,oy-4,36,6,2);}else{ctx.rect(ox-18,oy-4,36,6);}
+  ctx.fill();
+  ctx.fillStyle='#ff88cc';ctx.fillRect(ox-14,oy-4,28,2);
+  // デコグリッター
+  ctx.fillStyle='#ffdd00';ctx.fillRect(ox-10,oy-3,4,2);ctx.fillRect(ox-2,oy-3,4,2);ctx.fillRect(ox+6,oy-3,4,2);
+  // ハートマーク
+  ctx.fillStyle='#ff0066';ctx.font='6px serif';ctx.textAlign='center';ctx.fillText('♥',ox,oy-1);ctx.textAlign='left';
+  // トラック（ゴールド）
+  ctx.fillStyle='#ddaa00';
+  ctx.fillRect(ox-14,oy+1,8,3);ctx.fillRect(ox+6,oy+1,8,3);
+  // ウィール（ピンクグリッター）
+  var rot=frame*0.45;
+  [ox-13,ox+13].forEach(function(wx){
+    ctx.fillStyle='#ff66bb';
+    ctx.beginPath();ctx.arc(wx,oy+5,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffdd00';ctx.beginPath();ctx.arc(wx,oy+5,2,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff44cc';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(wx+Math.cos(rot)*3,oy+5+Math.sin(rot)*3);ctx.lineTo(wx-Math.cos(rot)*3,oy+5-Math.sin(rot)*3);ctx.stroke();
+  });
+  // スピードラインはピンク
+  ctx.globalAlpha=0.4;ctx.strokeStyle='#ff88cc';ctx.lineWidth=1.5;
+  for(var wi=0;wi<4;wi++){ctx.beginPath();ctx.moveTo(ox-24-wi*5,oy+5);ctx.lineTo(ox-19-wi*5,oy+5);ctx.stroke();}
+  ctx.globalAlpha=1;
+  // ネオンオーラ
+  ctx.shadowColor='#ff44cc';ctx.shadowBlur=8;
+  ctx.strokeStyle='#ff44cc';ctx.lineWidth=1;
+  ctx.beginPath();
+  if(ctx.roundRect){ctx.roundRect(ox-18,oy-4,36,6,2);}else{ctx.rect(ox-18,oy-4,36,6);}
+  ctx.stroke();ctx.shadowBlur=0;
+}
+
 function drawGirl(cx,cy,runF,isAir){
-  var isDanger=(lives===1);
-  var isAngry=(!isDanger&&Math.floor(frame/90)%5===0);
+  var isGyaru=(level>=5);
+  var isDanger=(!isGyaru&&lives===1);
+  var isAngry=(!isDanger&&!isGyaru&&Math.floor(frame/90)%5===0);
   var isInv=invincible>0;
   var isGun=gunTimer>0;
   var onSkate=(level>=3);
-  var HAIR=isDanger?'#885500':'#bb7722';
-  var HAIR_D=isDanger?'#552200':'#884400';
-  var SKIN=isDanger?'#ffaaaa':'#ffd0a0';
-  var BLOUSE='#eeeeff';
-  var SKIRT='#1144aa';
-  var SHOE='#332211';
+
+  // カラー設定
+  var HAIR,HAIR_D,SKIN,BLOUSE,SKIRT,SHOE;
+  if(isGyaru){
+    HAIR='#ffee44';       // 金髪
+    HAIR_D='#ddaa00';     // 暗め金
+    SKIN='#f0c080';       // 日焼け肌
+    BLOUSE='#ff88cc';     // ピンクトップス
+    SKIRT='#ff44aa';      // ホットピンクミニスカ
+    SHOE='#ff6600';       // オレンジブーツ
+  }else{
+    HAIR=isDanger?'#885500':'#bb7722';
+    HAIR_D=isDanger?'#552200':'#884400';
+    SKIN=isDanger?'#ffaaaa':'#ffd0a0';
+    BLOUSE='#eeeeff';
+    SKIRT='#1144aa';
+    SHOE='#332211';
+  }
+
   ctx.save();
   ctx.translate(cx,cy);
-  if(isInv){ctx.shadowColor='#ffdd00';ctx.shadowBlur=18;}
-  else if(isGun){ctx.shadowColor='#00ffcc';ctx.shadowBlur=12;}
 
-  if(onSkate&&!isAir){drawSkateboard(0,-2);}
+  // ギャルオーラ（キラキラ）
+  if(isGyaru){
+    ctx.globalAlpha=0.35+0.2*Math.sin(frame*0.2);
+    ctx.shadowColor='#ffdd00';ctx.shadowBlur=22;
+    ctx.strokeStyle='#ffdd00';ctx.lineWidth=1;
+    for(var gi=0;gi<8;gi++){
+      var ga=frame*0.08+gi/8*Math.PI*2,gr=22+Math.sin(frame*0.15+gi)*4;
+      ctx.beginPath();ctx.arc(Math.cos(ga)*gr,Math.sin(ga)*gr-22,1.5,0,Math.PI*2);ctx.stroke();
+    }
+    ctx.globalAlpha=1;ctx.shadowBlur=0;
+  }else if(isInv){
+    ctx.shadowColor='#ffdd00';ctx.shadowBlur=18;
+  }else if(isGun){
+    ctx.shadowColor='#00ffcc';ctx.shadowBlur=12;
+  }
 
+  // スケボー
+  if(onSkate&&!isAir){
+    if(isGyaru)drawGyaruSkateboard(0,-2);
+    else drawSkateboard(0,-2);
+  }
+
+  // 足
   if(onSkate){
     var skBob=isAir?0:Math.sin(frame*0.12)*1.5;
-    ctx.fillStyle='#ffffff';
+    ctx.fillStyle=isGyaru?'#f0c080':'#ffffff';
     ctx.fillRect(2,-16+skBob,5,10);
     ctx.fillStyle=SHOE;ctx.fillRect(1,-7+skBob,8,4);
-    ctx.fillStyle='#ffffff';
+    ctx.fillStyle=isGyaru?'#f0c080':'#ffffff';
     ctx.fillRect(-8,-13+skBob,5,8);
     ctx.fillStyle=SHOE;ctx.fillRect(-9,-6+skBob,8,4);
+    // ギャルブーツ装飾
+    if(isGyaru){
+      ctx.fillStyle='#ffdd00';ctx.fillRect(1,-7+skBob,8,1);
+      ctx.fillStyle='#ffdd00';ctx.fillRect(-9,-6+skBob,8,1);
+    }
   }else{
     var legSwing=isAir?0:Math.sin(runF*0.4)*5;
-    ctx.fillStyle='#ffffff';ctx.fillRect(1+legSwing*0.5,-9,5,7);
+    ctx.fillStyle=isGyaru?'#f0c080':'#ffffff';
+    ctx.fillRect(1+legSwing*0.5,-9,5,7);
     ctx.fillStyle=SHOE;ctx.fillRect(0+legSwing*0.5,-3,8,3);
-    ctx.fillStyle='#ffffff';ctx.fillRect(-6-legSwing*0.5,-9,5,7);
+    ctx.fillStyle=isGyaru?'#f0c080':'#ffffff';
+    ctx.fillRect(-6-legSwing*0.5,-9,5,7);
     ctx.fillStyle=SHOE;ctx.fillRect(-7-legSwing*0.5,-3,8,3);
   }
 
+  // スカート
   var sw=onSkate?(isAir?14:10):(isAir?13:9+Math.abs(Math.sin(runF*0.4))*3);
   var skirtY=onSkate?-25:-22;
   ctx.fillStyle=SKIRT;
   ctx.beginPath();ctx.moveTo(-8,skirtY);ctx.lineTo(8,skirtY);ctx.lineTo(8+sw/2,skirtY+12);ctx.lineTo(-8-sw/2,skirtY+12);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#2255cc';ctx.fillRect(-8,skirtY+6,16,2);
+  // ギャルスカートのフリル
+  if(isGyaru){
+    ctx.fillStyle='#ff88dd';ctx.fillRect(-8+sw/2,skirtY+10,16+sw,2);
+    ctx.fillStyle='#ffdd00';ctx.fillRect(-8,skirtY+6,16,1);
+  }else{
+    ctx.fillStyle='#2255cc';ctx.fillRect(-8,skirtY+6,16,2);
+  }
 
+  // 胴体
   var bodyY=onSkate?-36:-33;
   ctx.fillStyle=BLOUSE;ctx.fillRect(-7,bodyY,14,12);
-  ctx.fillStyle='#ffffff';
-  ctx.beginPath();ctx.moveTo(-7,bodyY);ctx.lineTo(0,bodyY+6);ctx.lineTo(7,bodyY);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#cc0000';ctx.fillRect(-1,bodyY+2,2,6);
-  ctx.beginPath();ctx.moveTo(-1,bodyY+2);ctx.lineTo(-4,bodyY+6);ctx.lineTo(-1,bodyY+5);ctx.fill();
-  ctx.beginPath();ctx.moveTo(1,bodyY+2);ctx.lineTo(4,bodyY+6);ctx.lineTo(1,bodyY+5);ctx.fill();
+  if(isGyaru){
+    // へそ出し：腹部を肌色に
+    ctx.fillStyle=SKIN;ctx.fillRect(-5,bodyY+8,10,4);
+    // トップスのデザイン
+    ctx.fillStyle='#ff44cc';ctx.fillRect(-7,bodyY,14,6);
+    ctx.fillStyle='#ffdd00';ctx.fillRect(-7,bodyY+5,14,2);
+    // ネックレス
+    ctx.strokeStyle='#ffdd00';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(0,bodyY+2,5,0.2,Math.PI-0.2);ctx.stroke();
+    ctx.fillStyle='#ffdd00';ctx.beginPath();ctx.arc(0,bodyY+5,1.5,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath();ctx.moveTo(-7,bodyY);ctx.lineTo(0,bodyY+6);ctx.lineTo(7,bodyY);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#cc0000';ctx.fillRect(-1,bodyY+2,2,6);
+    ctx.beginPath();ctx.moveTo(-1,bodyY+2);ctx.lineTo(-4,bodyY+6);ctx.lineTo(-1,bodyY+5);ctx.fill();
+    ctx.beginPath();ctx.moveTo(1,bodyY+2);ctx.lineTo(4,bodyY+6);ctx.lineTo(1,bodyY+5);ctx.fill();
+  }
 
+  // 腕
   var armS=onSkate?(isAir?0.6:0.3+Math.sin(frame*0.1)*0.15):(isAir?0.35:Math.sin(runF*0.4)*0.4);
-  ctx.strokeStyle=BLOUSE;ctx.lineWidth=3;
+  ctx.strokeStyle=isGyaru?SKIN:BLOUSE;ctx.lineWidth=3;
   var armOY=onSkate?bodyY+3:-30;
   var rax=6+Math.sin(-armS+0.2)*11,ray=armOY+Math.cos(-armS+0.2)*9;
   ctx.beginPath();ctx.moveTo(6,armOY);ctx.lineTo(rax,ray);ctx.stroke();
@@ -487,24 +619,104 @@ function drawGirl(cx,cy,runF,isAir){
     ctx.fillStyle='#555';ctx.fillRect(rax-1,ray-2,9,4);
     ctx.fillStyle='#00ffcc';ctx.shadowColor='#00ffcc';ctx.shadowBlur=5;
     ctx.fillRect(rax+7,ray-1,5,3);ctx.shadowBlur=0;
-  }else{ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(rax,ray,2.5,0,Math.PI*2);ctx.fill();}
+  }else{
+    ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(rax,ray,2.5,0,Math.PI*2);ctx.fill();
+    // ギャルブレスレット
+    if(isGyaru){ctx.strokeStyle='#ffdd00';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(rax,ray,3.5,0,Math.PI*2);ctx.stroke();}
+  }
   var lax=-6+Math.sin(armS-0.2)*11,lay=armOY+Math.cos(armS-0.2)*9;
   ctx.beginPath();ctx.moveTo(-6,armOY);ctx.lineTo(lax,lay);ctx.stroke();
   ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(lax,lay,2.5,0,Math.PI*2);ctx.fill();
+  if(isGyaru){ctx.strokeStyle='#ff88cc';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(lax,lay,3.5,0,Math.PI*2);ctx.stroke();}
 
+  // 頭
   var headY=onSkate?-49:-46;
-  ctx.fillStyle=HAIR_D;
-  ctx.fillRect(-13,headY,4,13);ctx.fillRect(9,headY,4,13);
-  ctx.fillRect(-12,headY+8,3,8);ctx.fillRect(9,headY+8,3,8);
+
+  // ギャルの超盛りヘア（後ろ）
+  if(isGyaru){
+    ctx.fillStyle=HAIR_D;
+    // ふわっとしたボリューム髪
+    ctx.beginPath();ctx.ellipse(0,headY+2,16,16,0,Math.PI,Math.PI*2);ctx.fill();
+    ctx.fillRect(-16,headY+2,32,8);
+    // 左右にはみ出す巻き髪
+    ctx.fillStyle=HAIR;
+    ctx.beginPath();ctx.ellipse(-14,headY+8,5,10,0.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(14,headY+8,5,10,-0.3,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.fillStyle=HAIR_D;
+    ctx.fillRect(-13,headY,4,13);ctx.fillRect(9,headY,4,13);
+    ctx.fillRect(-12,headY+8,3,8);ctx.fillRect(9,headY+8,3,8);
+  }
+
+  // 顔ベース
   ctx.fillStyle=SKIN;ctx.fillRect(-8,headY,16,13);
   if(isDanger){ctx.globalAlpha=0.25;ctx.fillStyle='#ff2200';ctx.fillRect(-8,headY,16,13);ctx.globalAlpha=1;}
-  ctx.fillStyle=HAIR;
-  ctx.fillRect(-8,headY-1,16,8);
-  ctx.fillRect(-10,headY+2,3,5);ctx.fillRect(7,headY+2,3,5);
-  ctx.fillRect(-10,headY-1,4,3);ctx.fillRect(6,headY-1,4,3);
+
+  // 前髪
+  if(isGyaru){
+    // 金髪の盛り前髪
+    ctx.fillStyle=HAIR;
+    ctx.beginPath();ctx.ellipse(0,headY,12,7,0,Math.PI,Math.PI*2);ctx.fill();
+    // サイドの毛束
+    ctx.fillRect(-12,headY-1,5,8);ctx.fillRect(7,headY-1,5,8);
+    // ハイライト
+    ctx.fillStyle='#ffffaa';ctx.fillRect(-4,headY-2,3,3);ctx.fillRect(2,headY-2,3,3);
+    // ヘアアクセ（デコ）
+    ctx.fillStyle='#ff44cc';ctx.fillRect(-2,headY-4,4,3);
+    ctx.fillStyle='#ffdd00';ctx.font='7px serif';ctx.textAlign='center';ctx.fillText('✦',0,headY-1);ctx.textAlign='left';
+  }else{
+    ctx.fillStyle=HAIR;
+    ctx.fillRect(-8,headY-1,16,8);
+    ctx.fillRect(-10,headY+2,3,5);ctx.fillRect(7,headY+2,3,5);
+    ctx.fillRect(-10,headY-1,4,3);ctx.fillRect(6,headY-1,4,3);
+  }
 
   var ey1=headY+5,ey2=headY+8,mouthY=headY+11;
-  if(isDanger){
+
+  if(isGyaru){
+    // ====== ギャル顔：デカ目・アイライン・つけまつ毛・グロスリップ ======
+    // アイライン（アーモンド目）
+    ctx.fillStyle='#111';
+    ctx.fillRect(-9,ey1-2,8,6);  // 左目土台
+    ctx.fillRect(1,ey1-2,8,6);   // 右目土台
+    // 目の白目
+    ctx.fillStyle='#fff';
+    ctx.fillRect(-8,ey1-1,6,4);
+    ctx.fillRect(2,ey1-1,6,4);
+    // 瞳（大きめ、輝く色）
+    ctx.fillStyle='#4488ff';
+    ctx.beginPath();ctx.arc(-5,ey1+1,2.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(5,ey1+1,2.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath();ctx.arc(-5,ey1+1,1.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(5,ey1+1,1.5,0,Math.PI*2);ctx.fill();
+    // 目の光
+    ctx.fillStyle='#fff';ctx.fillRect(-6,ey1,2,2);ctx.fillRect(4,ey1,2,2);
+    // つけまつ毛（上）
+    ctx.strokeStyle='#111';ctx.lineWidth=1;
+    for(var li=0;li<4;li++){
+      ctx.beginPath();ctx.moveTo(-8+li*2,ey1-2);ctx.lineTo(-9+li*2,ey1-5-li%2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(2+li*2,ey1-2);ctx.lineTo(1+li*2,ey1-5-li%2);ctx.stroke();
+    }
+    // アイライン（ウィング）
+    ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(-2,ey1-2);ctx.lineTo(1,ey1-4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(8,ey1-2);ctx.lineTo(11,ey1-4);ctx.stroke();
+    // チーク（日焼けサロン風）
+    ctx.globalAlpha=0.45;ctx.fillStyle='#ff6644';
+    ctx.beginPath();ctx.ellipse(-7,ey2,4,2.5,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(7,ey2,4,2.5,0,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    // グロスリップ
+    ctx.fillStyle='#ff4488';ctx.fillRect(-5,mouthY,10,3);
+    ctx.fillStyle='#ff88bb';ctx.fillRect(-3,mouthY,6,1);
+    // ギャル吹き出し
+    var gsays=['ウケる！','マジ卍','エグい！','ｷｬ♥','ﾁｮｰｳｶ'];
+    var gsay=gsays[Math.floor(frame/100)%gsays.length];
+    ctx.fillStyle='#ffdd00';ctx.shadowColor='#ffdd00';ctx.shadowBlur=5;
+    ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillText(gsay,cx-cx+18,headY-8);
+    ctx.shadowBlur=0;ctx.textAlign='left';
+  }else if(isDanger){
     ctx.fillStyle=HAIR_D;
     ctx.fillRect(-9,headY+1,3,2);ctx.fillRect(-6,headY+0,3,2);ctx.fillRect(-3,headY+2,2,2);
     ctx.fillRect(3,headY+2,2,2);ctx.fillRect(5,headY+1,3,2);ctx.fillRect(7,headY+0,2,2);
@@ -521,26 +733,6 @@ function drawGirl(cx,cy,runF,isAir){
     ctx.beginPath();ctx.moveTo(-5,mouthY+1);ctx.quadraticCurveTo(0,mouthY+3,5,mouthY+1);ctx.stroke();
     ctx.fillStyle='#88ccff';ctx.font='8px sans-serif';ctx.textAlign='center';
     ctx.fillText('💦',14,headY+3);ctx.textAlign='left';
-  }else if(onSkate&&!isAngry&&!isInv){
-    ctx.fillStyle=HAIR_D;ctx.fillRect(-9,headY+1,6,2);ctx.fillRect(3,headY+1,6,2);
-    ctx.fillStyle='#333';
-    ctx.beginPath();ctx.arc(-5,ey1,3,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(5,ey1,3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#8844aa';
-    ctx.beginPath();ctx.arc(-5,ey1,2,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(5,ey1,2,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#fff';ctx.fillRect(-4,ey1-1,2,2);ctx.fillRect(6,ey1-1,2,2);
-    ctx.strokeStyle='#cc6666';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(-3,mouthY);ctx.quadraticCurveTo(1,mouthY+3,5,mouthY-1);ctx.stroke();
-    ctx.globalAlpha=0.4;ctx.fillStyle='#ff8899';
-    ctx.beginPath();ctx.ellipse(-7,ey2,3,2,0,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(7,ey2,3,2,0,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=1;
-    if(Math.floor(frame/120)%3===0){
-      ctx.fillStyle='#ffffffcc';ctx.fillRect(14,headY-10,28,14);
-      ctx.fillStyle='#000';ctx.font='5px monospace';ctx.textAlign='left';
-      ctx.fillText('ﾁｮﾛｲ',16,headY);
-    }
   }else if(isAngry){
     ctx.fillStyle=HAIR_D;
     ctx.save();ctx.translate(-6,headY+1);ctx.rotate(0.3);ctx.fillRect(0,0,6,2);ctx.restore();
@@ -584,16 +776,17 @@ function drawGirl(cx,cy,runF,isAir){
     ctx.globalAlpha=1;
   }
 
-  if(isInv){
+  if(!isGyaru&&isInv){
     ctx.globalAlpha=0.3+0.15*Math.sin(frame*0.3);ctx.strokeStyle='#ffdd00';ctx.lineWidth=1;
     for(var oi=0;oi<6;oi++){var oa=frame*0.15+oi/6*Math.PI*2;ctx.beginPath();ctx.arc(Math.cos(oa)*16,Math.sin(oa)*18-22,2,0,Math.PI*2);ctx.stroke();}
     ctx.globalAlpha=1;
   }
+
   if(!isAir){
-    var lineCount=onSkate?5:3;
-    ctx.globalAlpha=onSkate?0.35:0.22;
-    ctx.fillStyle='#ffffff';
-    for(var li=0;li<lineCount;li++){ctx.fillRect(-22-li*3,-30+li*8,7+li*2,2);}
+    var lineCount=isGyaru?6:(onSkate?5:3);
+    ctx.globalAlpha=isGyaru?0.45:(onSkate?0.35:0.22);
+    ctx.fillStyle=isGyaru?'#ffdd00':'#ffffff';
+    for(var li2=0;li2<lineCount;li2++){ctx.fillRect(-22-li2*3,-30+li2*8,7+li2*2,2);}
     ctx.globalAlpha=1;
   }
   ctx.shadowBlur=0;ctx.restore();
@@ -628,9 +821,10 @@ function drawItems(){
   });
 }
 function drawBullets(){
+  var bcol=level>=5?'#ff44cc':'#00ffcc';
   bullets.forEach(function(b){
     if(!b.alive)return;
-    ctx.fillStyle='#00ffcc';ctx.shadowColor='#00ffcc';ctx.shadowBlur=10;
+    ctx.fillStyle=bcol;ctx.shadowColor=bcol;ctx.shadowBlur=10;
     ctx.beginPath();ctx.ellipse(b.x+8,b.y,10,4,0,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#ffffff';ctx.fillRect(b.x+2,b.y-2,8,4);ctx.shadowBlur=0;
   });
@@ -646,25 +840,28 @@ function drawParticles(){
 
 function drawHUD(){
   var th=THEMES[getTheme()];
-  ctx.strokeStyle='#ff88cc';ctx.lineWidth=1.5;
+  ctx.strokeStyle=level>=5?'#ffdd00':'#ff88cc';ctx.lineWidth=1.5;
   for(var ji=0;ji<P.maxJumps;ji++){
     ctx.strokeRect(W-22-ji*16,8,13,13);
-    if(ji<P.jumpsLeft){ctx.fillStyle='#ff88cc';ctx.fillRect(W-21-ji*16,9,11,11);}
+    if(ji<P.jumpsLeft){ctx.fillStyle=level>=5?'#ffdd00':'#ff88cc';ctx.fillRect(W-21-ji*16,9,11,11);}
   }
   ctx.fillStyle=th.acc;ctx.font='bold 6px monospace';ctx.fillText(Math.floor(dist)+'m',8,20);
   if(gunTimer>0){
     var gw=80*(gunTimer/600);
     ctx.fillStyle='#003322';ctx.fillRect(8,H-12,80,6);
-    ctx.fillStyle='#00ffcc';ctx.fillRect(8,H-12,gw|0,6);
-    ctx.strokeStyle='#00ffcc';ctx.lineWidth=1;ctx.strokeRect(8,H-12,80,6);
-    ctx.fillStyle='#00ffcc';ctx.font='5px monospace';ctx.fillText('GUN',92,H-7);
+    ctx.fillStyle=level>=5?'#ff44cc':'#00ffcc';ctx.fillRect(8,H-12,gw|0,6);
+    ctx.strokeStyle=level>=5?'#ff44cc':'#00ffcc';ctx.lineWidth=1;ctx.strokeRect(8,H-12,80,6);
+    ctx.fillStyle=level>=5?'#ff44cc':'#00ffcc';ctx.font='5px monospace';ctx.fillText('GUN',92,H-7);
   }
   if(levelUpTimer>0){
     var al=Math.min(1,levelUpTimer/30);ctx.globalAlpha=al;
     ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,H/2-40,W,80);
-    ctx.fillStyle=th.acc;ctx.shadowColor=th.acc;ctx.shadowBlur=22;
-    ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.fillText('LEVEL '+level+'  UP!',W/2,H/2-8);
-    ctx.font='bold 8px monospace';ctx.fillText(th.name+(level>=3?' GET SKATE!':''),W/2,H/2+14);
+    var bannerCol=level>=5?'#ffdd00':th.acc;
+    ctx.fillStyle=bannerCol;ctx.shadowColor=bannerCol;ctx.shadowBlur=22;
+    ctx.font='bold 14px monospace';ctx.textAlign='center';
+    ctx.fillText(level>=5?'GYARU MODE!!':'LEVEL '+level+'  UP!',W/2,H/2-8);
+    ctx.font='bold 8px monospace';
+    ctx.fillText(level>=5?'金髪ｽｰﾊﾟｰｷﾞｬﾙ爆誕!!':th.name+(level>=3?' SKATE!':''),W/2,H/2+14);
     ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.textAlign='left';levelUpTimer--;
   }
 }
@@ -684,15 +881,15 @@ function drawTitle(){
   ctx.fillStyle='#000';ctx.font='bold 7px monospace';ctx.textAlign='left';ctx.fillText(say,W/2+22,H*0.52-52);
   ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(W/2+16,H*0.52-53);ctx.lineTo(W/2+7,H*0.52-44);ctx.lineTo(W/2+22,H*0.52-48);ctx.fill();
   var iy=H*0.66;
-  ctx.fillStyle='rgba(10,0,20,0.9)';ctx.fillRect(16,iy,W-32,128);
-  ctx.strokeStyle='#ff88cc77';ctx.lineWidth=1;ctx.strokeRect(16,iy,W-32,128);
+  ctx.fillStyle='rgba(10,0,20,0.9)';ctx.fillRect(16,iy,W-32,130);
+  ctx.strokeStyle='#ff88cc77';ctx.lineWidth=1;ctx.strokeRect(16,iy,W-32,130);
   ctx.fillStyle='#ff88cc';ctx.font='bold 6px monospace';ctx.textAlign='center';ctx.fillText('◆  HOW TO PLAY  ◆',W/2,iy+16);
-  var rows=[['TAP / SPACE','ジャンプ (最大3回)'],['敵の上に乗る','踏んで倒す'],['★ アイテム','無敵になる'],['✦ GUN','ビームを撃つ'],['スコアUP','レベルアップ！'],['LV3到達','スケボー解放！']];
+  var rows=[['TAP / SPACE','ジャンプ (最大3回)'],['敵の上に乗る','踏んで倒す'],['★ アイテム','無敵になる'],['✦ GUN','ビームを撃つ'],['LV3到達','スケボー解放！'],['LV5到達','金髪ギャル爆誕！']];
   ctx.textAlign='left';
   rows.forEach(function(r,i){
-    ctx.fillStyle='#ffdd00';ctx.fillText('▶',24,iy+32+i*16);
-    ctx.fillStyle='#ff88cc';ctx.fillText(r[0],34,iy+32+i*16);
-    ctx.fillStyle='#eeddff';ctx.fillText(r[1],W/2,iy+32+i*16);
+    ctx.fillStyle=i===5?'#ffdd00':'#ffdd00';ctx.fillText('▶',24,iy+32+i*16);
+    ctx.fillStyle=i===5?'#ffdd44':'#ff88cc';ctx.fillText(r[0],34,iy+32+i*16);
+    ctx.fillStyle=i===5?'#ffee88':'#eeddff';ctx.fillText(r[1],W/2,iy+32+i*16);
   });
   if(Math.floor(titleFrame/20)%2===0){
     ctx.fillStyle='#ffdd00';ctx.shadowColor='#ffdd00';ctx.shadowBlur=10;
@@ -704,8 +901,9 @@ function drawTitle(){
 
 function drawGameOver(){
   ctx.fillStyle='rgba(0,0,0,0.88)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
-  ctx.fillStyle='#ff4488';ctx.shadowColor='#ff4488';ctx.shadowBlur=20;ctx.font='bold 12px monospace';ctx.fillText('GAME  OVER',W/2,H/2-55);ctx.shadowBlur=0;
-  var goSays=['は？なんで死んだの','しんどすぎ','もうやだ','帰る','うそでしょ'];
+  var goCol=level>=5?'#ffdd00':'#ff4488';
+  ctx.fillStyle=goCol;ctx.shadowColor=goCol;ctx.shadowBlur=20;ctx.font='bold 12px monospace';ctx.fillText('GAME  OVER',W/2,H/2-55);ctx.shadowBlur=0;
+  var goSays=level>=5?['ｳｹるｗ死んだ','マジ卍ｗ','ｴｸﾞいｗ','ﾁｮｰｳｶ負け','ｷﾔｰｺﾜｲ']:['は？なんで死んだの','しんどすぎ','もうやだ','帰る','うそでしょ'];
   ctx.fillStyle='#ffffff';ctx.font='bold 6px monospace';ctx.fillText(goSays[Math.floor(frame/60)%goSays.length],W/2,H/2-32);
   ctx.fillStyle='#ff88cc';ctx.font='bold 7px monospace';ctx.fillText('SCORE: '+score,W/2,H/2-12);
   ctx.fillStyle='#ffdd00';ctx.fillText('BEST:  '+hiScore,W/2,H/2+8);
@@ -723,9 +921,12 @@ function updateHUD(){
   livesEl.style.color=lives===1?'#ff0000':'#ff4466';
   livesEl.style.fontSize=lives===1?'14px':'11px';
   document.getElementById('score-disp').textContent='SCORE: '+score+'  BEST: '+hiScore;
-  document.getElementById('lv-disp').textContent='LV'+level+' '+THEMES[getTheme()].name;
+  var lvLabel=level>=5?'★GYARU★ LV'+level:('LV'+level+' '+THEMES[getTheme()].name);
+  document.getElementById('lv-disp').textContent=lvLabel;
+  document.getElementById('lv-disp').style.color=level>=5?'#ffdd00':'#ff88cc';
   var pu=document.getElementById('bot-hud');var html='';
-  if(level>=3)html+='<span style="color:#ff6600">SKATE</span> ';
+  if(level>=5)html+='<span style="color:#ffdd00;font-weight:bold">★GYARU★</span> ';
+  else if(level>=3)html+='<span style="color:#ff6600">SKATE</span> ';
   if(invincible>0)html+='<span style="color:#ffdd00">★ '+Math.ceil(invincible/60)+'s</span> ';
   if(tripleTimer>0)html+='<span style="color:#cc44ff">↑3JMP '+Math.ceil(tripleTimer/60)+'s</span> ';
   if(gunTimer>0)html+='<span style="color:#00ff99">GUN '+Math.ceil(gunTimer/60)+'s</span>';

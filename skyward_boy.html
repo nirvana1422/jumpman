@@ -206,7 +206,6 @@ var bgBlds=[];
 for(var bi=0;bi<14;bi++) bgBlds.push({x:Math.random()*W,w:12+Math.random()*50,h:30+Math.random()*160,win:Math.random(),style:Math.floor(Math.random()*3)});
 var bgWires=[];
 for(var wi2=0;wi2<5;wi2++) bgWires.push({y:80+wi2*90,sag:8+Math.random()*15,xOff:Math.random()*30+20});
-var bgSigns=[{x:20,y:120,text:'古着'},{x:W-70,y:200,text:'BAR'},{x:40,y:320,text:'レコード'},{x:W-60,y:80,text:'純喫茶'},{x:W/2-30,y:420,text:'中古'}];
 var noiseCanvas=document.createElement('canvas');
 noiseCanvas.width=W; noiseCanvas.height=H;
 var noiseCtx=noiseCanvas.getContext('2d');
@@ -790,10 +789,6 @@ function drawRetroCity(th){
     ctx.stroke();
     ctx.fillStyle='rgba(15,8,0,0.9)'; ctx.fillRect(w.xOff-3,wy-60,5,80); ctx.fillRect(w.xOff-14,wy-55,28,4);
     ctx.fillStyle='rgba(80,60,20,0.7)'; ctx.beginPath(); ctx.arc(w.xOff-10,wy-53,3,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(w.xOff+10,wy-53,3,0,Math.PI*2); ctx.fill();
-  });
-  bgSigns.forEach(function(s){
-    var sy=(s.y+bgY*0.25)%H;
-    if(sy>-20&&sy<H+20){ ctx.font='bold 9px monospace'; ctx.fillStyle=th.accent+'99'; ctx.shadowColor=th.accent; ctx.shadowBlur=6; ctx.fillText(s.text,s.x,sy); ctx.shadowBlur=0; }
   });
   var mf=0.7+0.3*Math.sin(frame*0.07);
   ctx.fillStyle='rgba(255,220,120,'+mf*0.9+')'; ctx.shadowColor='#FFD700'; ctx.shadowBlur=20*mf;

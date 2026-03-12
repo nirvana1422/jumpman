@@ -33,9 +33,6 @@ var ctx = cv.getContext('2d');
 var W = 360, H = 560;
 cv.width = W; cv.height = H;
 
-// ============================================================
-// AUDIO
-// ============================================================
 var _AC = null;
 function getAC() {
   if (!_AC) { try { _AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} }
@@ -103,9 +100,6 @@ function playBGM(lv) {
   bgmLoop(a.currentTime+0.08);
 }
 
-// ============================================================
-// THEMES
-// ============================================================
 var THEMES = [
   { name:'KOENJI',   sky0:'#2a1800', sky1:'#1a0f00', wall:'#8B4513', wallH:'#D2691E', accent:'#F4A460', scanline:'rgba(0,0,0,0.18)', crt:'rgba(0,255,100,0.04)' },
   { name:'FURUGIYA', sky0:'#1a0800', sky1:'#0d0500', wall:'#6B4226', wallH:'#A0522D', accent:'#CD853F', scanline:'rgba(0,0,0,0.20)', crt:'rgba(255,200,0,0.03)' },
@@ -114,24 +108,15 @@ var THEMES = [
   { name:'FUNK',     sky0:'#050010', sky1:'#0a0020', wall:'#330066', wallH:'#6600cc', accent:'#FF00FF', scanline:'rgba(0,0,0,0.22)', crt:'rgba(180,0,255,0.05)' },
 ];
 
-// ============================================================
-// STATE
-// ============================================================
 var STATE='title', frame=0, score=0, best=0;
 var lives=3, invF=0, phaseF=0, laserF=0;
 var lvl=0, lastLvl=-1, lvlFlash=0;
 var particles=[], lasers=[];
 var screenShake=0, shakeX=0, shakeY=0;
 
-// ============================================================
-// PLAYER
-// ============================================================
 var PL={ x:W/2, y:H*0.7, w:24, h:30, vy:0, vx:2.4, held:false, animT:0 };
 var GRAVITY=0.28, LIFT_VY=-9.0, LIFT_K=0.28, MAX_FALL=14, WALL_THICK=22;
 
-// ============================================================
-// WALLS / ENEMIES / ITEMS
-// ============================================================
 var walls=[], wallTimer=0;
 var enemies=[], enemyTimer=0;
 var items=[], itemTimer=200;
@@ -195,13 +180,8 @@ function fireLaser(x,y){
   burst(x,y,'#F80',10);
 }
 
-// ============================================================
-// SCROLLING BACKGROUND DATA
-// ============================================================
 var bgScrollY = 0;
 
-// ネオン点滅用：ハッシュ関数（シード→疑似ランダム）
-// 各窓に固有のシードを与えて、frameと組み合わせて点滅を決定する
 function hash(n) {
   n = ((n >> 16) ^ n) * 0x45d9f3b;
   n = ((n >> 16) ^ n) * 0x45d9f3b;
@@ -209,41 +189,30 @@ function hash(n) {
   return (n & 0x7fffffff) / 0x7fffffff;
 }
 
-// 窓が今フレームで光っているか判定
-// seed: 窓ごとの固有値, frame: 現在フレーム
-// 各窓は独自の「点灯周期」と「点灯位相」を持つ
 function isWindowLit(seed, f) {
-  // 点灯周期: 20〜180フレームのどれか（ゆっくり〜速め）
   var period = 20 + (hash(seed * 7 + 1) * 160) | 0;
-  // 点灯している割合: 40%〜90%（ほとんど常時点灯〜たまに消える）
   var onRatio = 0.4 + hash(seed * 13 + 2) * 0.5;
-  // 位相オフセット
   var phase = (hash(seed * 31 + 3) * period) | 0;
-  // フレームを周期で割った余りがonRatio以内なら点灯
   var t = (f + phase) % period;
   var lit = (t / period) < onRatio;
-
-  // ネオンらしい「チラつき」: ごくたまに追加で瞬断
   var flickerSeed = (f / 8 | 0) * 999 + seed;
-  var flicker = hash(flickerSeed) > 0.97; // 3%の確率で瞬断
+  var flicker = hash(flickerSeed) > 0.97;
   return lit && !flicker;
 }
 
-// 窓の色バリエーション（ネオン風）
 var WIN_COLORS_FAR = [
-  'rgba(255,200,80,',   // 電球色
-  'rgba(255,220,120,',  // 白熱
-  'rgba(200,180,100,',  // 暖色
+  'rgba(255,200,80,',
+  'rgba(255,220,120,',
+  'rgba(200,180,100,',
 ];
 var WIN_COLORS_MID = [
-  'rgba(255,200,80,',   // 電球色
-  'rgba(255,160,60,',   // オレンジ
-  'rgba(255,240,180,',  // 白系
-  'rgba(180,220,255,',  // 青白
-  'rgba(255,100,80,',   // 赤系
+  'rgba(255,200,80,',
+  'rgba(255,160,60,',
+  'rgba(255,240,180,',
+  'rgba(180,220,255,',
+  'rgba(255,100,80,',
 ];
 
-// 建物データ（固定配置）
 var BG_BUILDINGS = [];
 (function(){
   var slots = [
@@ -256,7 +225,6 @@ var BG_BUILDINGS = [];
     {x:250, w:40, h:260},
     {x:300, w:25, h:190},
     {x:330, w:22, h:170},
-    // 中景
     {x:0,   w:45, h:300},
     {x:55,  w:38, h:350},
     {x:105, w:30, h:280},
@@ -266,7 +234,6 @@ var BG_BUILDINGS = [];
     {x:315, w:38, h:290},
   ];
   slots.forEach(function(s, i) {
-    // 各建物の窓列ごとにシードを事前生成
     var bldSeed = i * 1000 + 7;
     var winCols = [];
     var numCols = Math.max(1, (s.w / 8) | 0);
@@ -274,11 +241,8 @@ var BG_BUILDINGS = [];
       var colWins = [];
       var numRows = Math.max(1, (s.h / 12) | 0);
       for (var r = 0; r < numRows; r++) {
-        // この窓が存在するか（建物によってランダムに窓なし）
         var exists = hash(bldSeed + c * 100 + r) > 0.6;
-        // 窓の色インデックス
         var colorIdx = (hash(bldSeed + c * 200 + r) * (i < 9 ? WIN_COLORS_FAR.length : WIN_COLORS_MID.length)) | 0;
-        // 点滅シード
         var flickSeed = bldSeed * 3 + c * 77 + r * 13;
         colWins.push({ exists: exists, colorIdx: colorIdx, flickSeed: flickSeed });
       }
@@ -292,7 +256,6 @@ var BG_BUILDINGS = [];
   });
 })();
 
-// 電信柱データ
 var BG_POLES = [
   {x: 18,  side:'L'},
   {x: 340, side:'R'},
@@ -300,7 +263,6 @@ var BG_POLES = [
   {x: 265, side:'R'},
 ];
 
-// 星
 var STARS = [];
 (function(){
   for(var i=0;i<80;i++){
@@ -308,9 +270,16 @@ var STARS = [];
   }
 })();
 
-// ============================================================
-// NOISE
-// ============================================================
+var SHOOTING_STARS = [];
+(function(){
+  for(var i=0;i<4;i++){
+    SHOOTING_STARS.push({
+      x: 60 + Math.random()*(W-120),
+      startFrame: i * 60 + Math.random()*40|0,
+    });
+  }
+})();
+
 var noiseCanvas=document.createElement('canvas');
 noiseCanvas.width=W; noiseCanvas.height=H;
 var noiseCtx=noiseCanvas.getContext('2d');
@@ -322,9 +291,6 @@ function regenerateNoise(){
 regenerateNoise();
 var noiseTimer=0;
 
-// ============================================================
-// INIT
-// ============================================================
 function initGame(){
   STATE='play'; frame=0; score=0;
   lives=3; invF=0; phaseF=0; laserF=0; lvl=0; lastLvl=-1; lvlFlash=0;
@@ -335,9 +301,6 @@ function initGame(){
   setTimeout(function(){ try{playBGM(0);}catch(e){} },50);
 }
 
-// ============================================================
-// UPDATE
-// ============================================================
 function update(){
   frame++;
   noiseTimer++; if(noiseTimer>4){ regenerateNoise(); noiseTimer=0; }
@@ -459,9 +422,6 @@ function doGameOver(){
   screenShake=20; burst(PL.x,PL.y,'#FF4444',20);
 }
 
-// ============================================================
-// キャラ描画
-// ============================================================
 function drawBoyKimokawa(x,y,sc,animT,isInv,isPhase){
   sc=sc||1; ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
   var bob=Math.sin(animT*0.18)*1.8, run=Math.sin(animT*0.22);
@@ -647,9 +607,6 @@ function drawBoy(x,y,sc,animT,isInv,isPhase){
   else             drawBoyFunk(x,y,sc,animT,isInv,isPhase);
 }
 
-// ============================================================
-// 敵
-// ============================================================
 function drawHeartSmall(cx,cy,size,c){
   c.save(); c.translate(cx,cy); c.scale(size*0.12,size*0.12);
   c.beginPath(); c.moveTo(0,5); c.bezierCurveTo(-5,-2,-8,1,-8,3); c.bezierCurveTo(-8,7,-4,10,0,14); c.bezierCurveTo(4,10,8,7,8,3); c.bezierCurveTo(8,1,5,-2,0,5); c.closePath(); c.fill(); c.restore();
@@ -690,12 +647,8 @@ function drawEnemy(e){
   ctx.restore();
 }
 
-// ============================================================
-// BACKGROUND DRAW
-// ============================================================
 function getSkyRatio() {
   var ratios = [0.40, 0.54, 0.68, 0.82, 1.00];
-
   return ratios[Math.min(lvl, 4)];
 }
 
@@ -713,14 +666,12 @@ function drawScrollingBackground() {
   var skyH = H * skyRatio;
   var sc = SKY_COLORS[lvl] || SKY_COLORS[0];
 
-  // 空
   var skyGr = ctx.createLinearGradient(0, 0, 0, skyH);
   skyGr.addColorStop(0, sc[0]);
   skyGr.addColorStop(1, sc[1]);
   ctx.fillStyle = skyGr;
   ctx.fillRect(0, 0, W, skyH);
 
-  // 月
   if (lvl >= 2) {
     var moonY = skyH * 0.25;
     var moonX = W * 0.8;
@@ -733,7 +684,6 @@ function drawScrollingBackground() {
     ctx.beginPath(); ctx.arc(moonX + 8, moonY - 4, 13, 0, Math.PI * 2); ctx.fill();
   }
 
-  // 星
   if (lvl >= 3) {
     var starAlpha = (lvl - 3) * 0.5 + 0.4;
     STARS.forEach(function(s) {
@@ -745,17 +695,38 @@ function drawScrollingBackground() {
     ctx.globalAlpha = 1;
   }
 
-  // 流れ星
+  // 流れ星：右上から左下へ
   if (lvl >= 4) {
-    if (frame % 90 < 30) {
-      var sf = frame % 90;
-      var sx = (frame * 7) % (W + 60) - 30;
-      ctx.globalAlpha = Math.max(0, 1 - sf / 30);
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
-      ctx.shadowColor = '#aaddff'; ctx.shadowBlur = 6;
-      ctx.beginPath(); ctx.moveTo(sx, sf * 2); ctx.lineTo(sx - 30, sf * 2 + 15); ctx.stroke();
-      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-    }
+    var skyAreaH = H * skyRatio;
+    SHOOTING_STARS.forEach(function(ss, si) {
+      var cycle = 180 + si * 40;
+      var localF = (frame + ss.startFrame) % cycle;
+      if (localF >= 50) return;
+      var progress = localF / 50;
+      var startX = ss.x + 80;
+      var startY = skyAreaH * 0.05;
+      var endX   = ss.x - 80;
+      var endY   = skyAreaH * 0.45;
+      var sx = startX + progress * (endX - startX);
+      var sy = startY + progress * (endY - startY);
+      var tailLen = 10;
+      var dx = endX - startX, dy = endY - startY;
+      var dist = Math.sqrt(dx*dx + dy*dy);
+      var tailX = sx - (dx / dist) * tailLen;
+      var tailY = sy - (dy / dist) * tailLen;
+      var alpha = progress < 0.7 ? 1 : (1 - progress) / 0.3;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = '#aaddff';
+      ctx.shadowBlur = 5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(tailX, tailY);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    });
   }
 
   if (skyRatio >= 1.0) return;
@@ -767,9 +738,6 @@ function drawScrollingBackground() {
   ctx.fillStyle = groundGr;
   ctx.fillRect(0, bldTop, W, H - bldTop);
 
-  // -------------------------------------------------------
-  // 遠景建物
-  // -------------------------------------------------------
   var farScrollY = bgScrollY * 0.5;
   BG_BUILDINGS.slice(0, 9).forEach(function(b, bi) {
     var bh = b.h;
@@ -780,12 +748,9 @@ function drawScrollingBackground() {
       var drawTop = Math.max(by, bldTop);
       var drawH = Math.min(by + bh, H) - drawTop;
       if (drawH <= 0) continue;
-
       ctx.globalAlpha = 0.35;
       ctx.fillStyle = '#080500';
       ctx.fillRect(b.x, drawTop, b.w, drawH);
-
-      // ネオン窓（ランダム点滅）
       var winStep = 10, winW = 3, winH2 = 4;
       b.winCols.forEach(function(col, ci) {
         var wx = b.x + 2 + ci * 7;
@@ -806,9 +771,6 @@ function drawScrollingBackground() {
     }
   });
 
-  // -------------------------------------------------------
-  // 中景建物
-  // -------------------------------------------------------
   var midScrollY = bgScrollY * 0.8;
   BG_BUILDINGS.slice(9).forEach(function(b, bi) {
     var bh = b.h;
@@ -819,7 +781,6 @@ function drawScrollingBackground() {
       var drawTop = Math.max(by, bldTop);
       var drawH = Math.min(by + bh, H) - drawTop;
       if (drawH <= 0) continue;
-
       ctx.globalAlpha = 0.70;
       ctx.fillStyle = '#030200';
       ctx.fillRect(b.x, drawTop, b.w, drawH);
@@ -827,8 +788,6 @@ function drawScrollingBackground() {
         ctx.fillStyle = th.wallH + '55';
         ctx.fillRect(b.x, by, b.w, 2);
       }
-
-      // ネオン窓（ランダム点滅）
       var winStep = 11, winW = 4, winH2 = 5;
       b.winCols.forEach(function(col, ci) {
         var wx = b.x + 3 + ci * 8;
@@ -839,11 +798,9 @@ function drawScrollingBackground() {
           if (wy < bldTop || wy > H - 2) return;
           if (isWindowLit(win.flickSeed, frame)) {
             var colPalette = WIN_COLORS_MID[win.colorIdx % WIN_COLORS_MID.length];
-            // 光っているときは窓本体＋ぼんやりしたグロー
             ctx.globalAlpha = 0.75;
             ctx.fillStyle = colPalette + '1)';
             ctx.fillRect(wx, wy, winW, winH2);
-            // グロー（薄い外側）
             ctx.globalAlpha = 0.18;
             ctx.fillStyle = colPalette + '1)';
             ctx.fillRect(wx - 1, wy - 1, winW + 2, winH2 + 2);
@@ -854,9 +811,6 @@ function drawScrollingBackground() {
     }
   });
 
-  // -------------------------------------------------------
-  // 電信柱
-  // -------------------------------------------------------
   var poleScrollY = bgScrollY * 1.0;
   var poleTotalH = 280;
   ctx.globalAlpha = 0.80;
@@ -892,9 +846,6 @@ function drawScrollingBackground() {
   ctx.globalAlpha = 1;
 }
 
-// ============================================================
-// レーザー描画
-// ============================================================
 function drawLasers(){
   lasers.forEach(function(l){
     var prog=l.life/28;
@@ -907,9 +858,6 @@ function drawLasers(){
   });
 }
 
-// ============================================================
-// CRT
-// ============================================================
 function drawCRT(th){
   ctx.fillStyle=th.scanline;
   for(var sy=0;sy<H;sy+=3){ ctx.fillRect(0,sy,W,1); }
@@ -921,9 +869,6 @@ function drawCRT(th){
   if(Math.random()<0.015){ var gy=Math.random()*H|0,gh=1+Math.random()*3|0,gx=(Math.random()-0.5)*8; var id=ctx.getImageData(0,gy,W,gh); ctx.putImageData(id,gx,gy); }
 }
 
-// ============================================================
-// WALLS
-// ============================================================
 function drawWalls(th){
   walls.forEach(function(w){
     w.segs.forEach(function(s){
@@ -939,9 +884,6 @@ function drawWalls(th){
   });
 }
 
-// ============================================================
-// ITEMS
-// ============================================================
 function drawItems(){
   items.forEach(function(it){
     var pulse=1+0.14*Math.sin(it.tw);
@@ -964,9 +906,6 @@ function drawItems(){
   });
 }
 
-// ============================================================
-// HUD
-// ============================================================
 function drawHUD(th){
   ctx.font='bold 13px monospace'; ctx.textAlign='left';
   var hs=''; for(var i=0;i<Math.max(0,lives);i++) hs+='♥';
@@ -989,9 +928,6 @@ function drawHUD(th){
   }
 }
 
-// ============================================================
-// TITLE / GAME OVER
-// ============================================================
 var titleFrame=0;
 function drawTitle(){
   titleFrame++;
@@ -1035,9 +971,6 @@ function drawGameOver(){
   ctx.textAlign='left';
 }
 
-// ============================================================
-// MAIN DRAW
-// ============================================================
 function draw(){
   ctx.clearRect(0,0,W,H);
   var th=THEMES[lvl]||THEMES[0];
@@ -1063,9 +996,6 @@ function draw(){
   drawCRT(th);
 }
 
-// ============================================================
-// INPUT
-// ============================================================
 var tapping=false;
 function onDown(){ try{var a=getAC();if(a&&a.state==='suspended')a.resume();}catch(e){} if(STATE==='title'){initGame();return;} if(STATE==='over'){initGame();return;} if(!tapping){tapping=true;PL.held=true;playJump();} }
 function onUp(){ tapping=false; PL.held=false; }

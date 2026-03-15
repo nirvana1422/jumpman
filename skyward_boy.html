@@ -80,9 +80,10 @@ var BGMS = [
   { tempo:0.10, mel:[[587,0.10],[622,0.10],[554,0.10],[587,0.10],[659,0.14],[622,0.10],[0,0.10],[698,0.10],[659,0.10],[622,0.14],[587,0.10],[554,0.10],[523,0.10],[554,0.14],[587,0.10],[622,0.10],[659,0.14],[698,0.10],[740,0.10],[698,0.10],[659,0.14],[622,0.10],[587,0.10],[554,0.14],[523,0.10],[494,0.10],[466,0.20],[494,0.10],[523,0.30]], bass:[[147,0.10],[0,0.05],[147,0.05],[165,0.10],[147,0.10],[131,0.14],[0,0.05],[147,0.10],[165,0.10],[147,0.14],[131,0.10],[123,0.10],[116,0.14],[123,0.10],[131,0.30]], mt:'sawtooth',mv:0.040,bt:'sawtooth',bv:0.050, kickPat:[0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30],snarePat:[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29],hatPat:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],beatUnit:0.10 },
 ];
 function playBGM(lv) {
+  var bgmIdx = Math.max(0, lv - 1);
   if (bgmLv===lv) return; bgmLv=lv;
   if (bgmTimer){clearTimeout(bgmTimer);bgmTimer=null;}
-  var D=BGMS[lv],a=getAC(); if(!a) return;
+  var D=BGMS[bgmIdx],a=getAC(); if(!a) return;
   var mLen=D.mel.reduce(function(s,n){return s+n[1];},0);
   var bLen=D.bass.reduce(function(s,n){return s+n[1];},0);
   function bgmLoop(st) {
@@ -100,9 +101,11 @@ function playBGM(lv) {
   bgmLoop(a.currentTime+0.08);
 }
 
+// LV1-5の5段階
 var THEMES = [
+  null, // 0は未使用
   { name:'KOENJI',   sky0:'#2a1800', sky1:'#1a0f00', wall:'#8B4513', wallH:'#D2691E', accent:'#F4A460', scanline:'rgba(0,0,0,0.18)', crt:'rgba(0,255,100,0.04)' },
-  { name:'FURUGIYA', sky0:'#1a0800', sky1:'#0d0500', wall:'#6B4226', wallH:'#A0522D', accent:'#CD853F', scanline:'rgba(0,0,0,0.20)', crt:'rgba(255,200,0,0.03)' },
+  { name:'FURUGIYA', sky0:'#1a3300', sky1:'#0d1a00', wall:'#4a7a2a', wallH:'#6aaa3a', accent:'#aadd44', scanline:'rgba(0,0,0,0.20)', crt:'rgba(100,255,0,0.04)' },
   { name:'JAZZBAR',  sky0:'#00050f', sky1:'#000a1a', wall:'#1a3355', wallH:'#2255aa', accent:'#FFD700', scanline:'rgba(0,0,0,0.22)', crt:'rgba(0,100,255,0.04)' },
   { name:'YAKUZA',   sky0:'#0f0000', sky1:'#1a0000', wall:'#660000', wallH:'#aa1111', accent:'#FF4444', scanline:'rgba(0,0,0,0.25)', crt:'rgba(255,0,0,0.04)' },
   { name:'FUNK',     sky0:'#050010', sky1:'#0a0020', wall:'#330066', wallH:'#6600cc', accent:'#FF00FF', scanline:'rgba(0,0,0,0.22)', crt:'rgba(180,0,255,0.05)' },
@@ -110,7 +113,7 @@ var THEMES = [
 
 var STATE='title', frame=0, score=0, best=0;
 var lives=3, invF=0, phaseF=0, laserF=0;
-var lvl=0, lastLvl=-1, lvlFlash=0;
+var lvl=1, lastLvl=-1, lvlFlash=0;
 var particles=[], lasers=[];
 var screenShake=0, shakeX=0, shakeY=0;
 
@@ -121,14 +124,14 @@ var walls=[], wallTimer=0;
 var enemies=[], enemyTimer=0;
 var items=[], itemTimer=200;
 
-function wallSpeed(){ return 1.3+lvl*0.5+score*0.0001; }
-function wallGap()  { return Math.max(50,100-lvl*8); }
+function wallSpeed(){ return 1.3+(lvl-1)*0.5+score*0.0001; }
+function wallGap()  { return Math.max(50,100-(lvl-1)*8); }
 function getLevel(){
-  if(score>=5000) return 4;
-  if(score>=2500) return 3;
-  if(score>=1000) return 2;
-  if(score>=400)  return 1;
-  return 0;
+  if(score>=5000) return 5;
+  if(score>=2500) return 4;
+  if(score>=1000) return 3;
+  if(score>=400)  return 2;
+  return 1;
 }
 function makeWallSegs(){
   var segs=[],r=Math.random();
@@ -149,7 +152,7 @@ function hitsWall(segs,px,pw){
 function spawnEnemy(){
   var x=30+Math.random()*(W-60);
   enemies.push({x:x,y:-35,w:26,h:24,bx:x,range:30+Math.random()*80,
-    dir:Math.random()<0.5?1:-1,spd:0.7+Math.random()*1.4+lvl*0.35,
+    dir:Math.random()<0.5?1:-1,spd:0.7+Math.random()*1.4+(lvl-1)*0.35,
     animT:Math.random()*60|0,dead:false,deadTimer:0,
     eyeType:Math.floor(Math.random()*4),
     col:['#cc3300','#aa2200','#dd4411','#bb3300'][Math.floor(Math.random()*4)]});
@@ -216,22 +219,10 @@ var WIN_COLORS_MID = [
 var BG_BUILDINGS = [];
 (function(){
   var slots = [
-    {x:10,  w:28, h:200},
-    {x:50,  w:20, h:160},
-    {x:90,  w:35, h:240},
-    {x:140, w:22, h:180},
-    {x:175, w:30, h:220},
-    {x:215, w:18, h:150},
-    {x:250, w:40, h:260},
-    {x:300, w:25, h:190},
-    {x:330, w:22, h:170},
-    {x:0,   w:45, h:300},
-    {x:55,  w:38, h:350},
-    {x:105, w:30, h:280},
-    {x:150, w:50, h:400},
-    {x:215, w:35, h:320},
-    {x:265, w:42, h:380},
-    {x:315, w:38, h:290},
+    {x:10,  w:28, h:200},{x:50,  w:20, h:160},{x:90,  w:35, h:240},{x:140, w:22, h:180},
+    {x:175, w:30, h:220},{x:215, w:18, h:150},{x:250, w:40, h:260},{x:300, w:25, h:190},{x:330, w:22, h:170},
+    {x:0,   w:45, h:300},{x:55,  w:38, h:350},{x:105, w:30, h:280},{x:150, w:50, h:400},
+    {x:215, w:35, h:320},{x:265, w:42, h:380},{x:315, w:38, h:290},
   ];
   slots.forEach(function(s, i) {
     var bldSeed = i * 1000 + 7;
@@ -248,19 +239,12 @@ var BG_BUILDINGS = [];
       }
       winCols.push(colWins);
     }
-    BG_BUILDINGS.push({
-      x: s.x, w: s.w, h: s.h,
-      isFar: i < 9,
-      winCols: winCols,
-    });
+    BG_BUILDINGS.push({ x: s.x, w: s.w, h: s.h, isFar: i < 9, winCols: winCols });
   });
 })();
 
 var BG_POLES = [
-  {x: 18,  side:'L'},
-  {x: 340, side:'R'},
-  {x: 95,  side:'L'},
-  {x: 265, side:'R'},
+  {x: 18,  side:'L'},{x: 340, side:'R'},{x: 95,  side:'L'},{x: 265, side:'R'},
 ];
 
 var STARS = [];
@@ -273,10 +257,7 @@ var STARS = [];
 var SHOOTING_STARS = [];
 (function(){
   for(var i=0;i<4;i++){
-    SHOOTING_STARS.push({
-      x: 60 + Math.random()*(W-120),
-      startFrame: i * 60 + Math.random()*40|0,
-    });
+    SHOOTING_STARS.push({ x: 60 + Math.random()*(W-120), startFrame: i * 60 + Math.random()*40|0 });
   }
 })();
 
@@ -293,12 +274,12 @@ var noiseTimer=0;
 
 function initGame(){
   STATE='play'; frame=0; score=0;
-  lives=3; invF=0; phaseF=0; laserF=0; lvl=0; lastLvl=-1; lvlFlash=0;
+  lives=3; invF=0; phaseF=0; laserF=0; lvl=1; lastLvl=-1; lvlFlash=0;
   particles=[]; lasers=[];
   walls=[]; wallTimer=0; enemies=[]; enemyTimer=0; items=[]; itemTimer=200;
   PL.x=W/2; PL.y=H*0.7; PL.vy=0; PL.vx=2.4; PL.held=false; PL.animT=0;
   bgScrollY=0; bgmLv=-1; screenShake=0;
-  setTimeout(function(){ try{playBGM(0);}catch(e){} },50);
+  setTimeout(function(){ try{playBGM(1);}catch(e){} },50);
 }
 
 function update(){
@@ -314,7 +295,7 @@ function update(){
   PL.x+=PL.vx;
   if(PL.x<PL.w/2){PL.x=PL.w/2;PL.vx=Math.abs(PL.vx);}
   if(PL.x>W-PL.w/2){PL.x=W-PL.w/2;PL.vx=-Math.abs(PL.vx);}
-  PL.vx=PL.vx>0?2.4+lvl*0.2:-(2.4+lvl*0.2);
+  PL.vx=PL.vx>0?2.4+(lvl-1)*0.2:-(2.4+(lvl-1)*0.2);
   PL.vy=PL.held?PL.vy+(LIFT_VY-PL.vy)*LIFT_K:Math.min(PL.vy+GRAVITY,MAX_FALL);
 
   var ws=wallSpeed();
@@ -349,13 +330,13 @@ function update(){
   wallTimer++; if(wallTimer>=wallGap()){wallTimer=0;walls.push({y:-WALL_THICK,segs:makeWallSegs()});}
 
   enemyTimer++;
-  var eInt=Math.max(54,120-lvl*15);
+  var eInt=Math.max(54,120-(lvl-1)*15);
   if(enemyTimer>=eInt){
     enemyTimer=0; spawnEnemy();
     if(Math.random()<0.20) spawnEnemy();
-    if(lvl>=2&&Math.random()<0.18) spawnEnemy();
-    if(lvl>=3&&Math.random()<0.17) spawnEnemy();
-    if(lvl>=4&&Math.random()<0.15) spawnEnemy();
+    if(lvl>=3&&Math.random()<0.18) spawnEnemy();
+    if(lvl>=4&&Math.random()<0.17) spawnEnemy();
+    if(lvl>=5&&Math.random()<0.15) spawnEnemy();
   }
 
   for(var i=0;i<enemies.length;i++){
@@ -422,89 +403,206 @@ function doGameOver(){
   screenShake=20; burst(PL.x,PL.y,'#FF4444',20);
 }
 
+// ===== キャラクター描画 =====
+
+// LV1: 高円寺カジュアル（カーキ服・黒髪・もみあげ）
 function drawBoyKimokawa(x,y,sc,animT,isInv,isPhase){
   sc=sc||1; ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
   var bob=Math.sin(animT*0.18)*1.8, run=Math.sin(animT*0.22);
   ctx.globalAlpha=isPhase?0.65:1.0;
+  // パンツ（デニム）
+  ctx.fillStyle='#3d3d5c'; var legL=Math.abs(run)*6, legR=(1-Math.abs(run))*6;
+  ctx.fillRect(-9,13+bob,7,9+legL*0.3); ctx.fillRect(2,13+bob,7,9+legR*0.3);
+  ctx.fillStyle='#2a1a00'; ctx.beginPath(); ctx.ellipse(-5.5,23+bob+legL*0.3,6.5,3.5,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5.5,23+bob+legR*0.3,6.5,3.5,0,0,Math.PI*2); ctx.fill();
+  // 服（カーキ）
   ctx.fillStyle='#556B2F'; ctx.fillRect(-11,-2+bob,22,17);
   ctx.fillStyle='#4a5e28'; ctx.fillRect(-8,1+bob,7,6);
   ctx.fillStyle='#6a8040'; ctx.fillRect(-8,1+bob,7,1);
   ctx.fillStyle='#8B7355'; ctx.fillRect(-6,-4+bob,12,4);
+  // 顔
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(0,-14+bob,13,0,Math.PI*2); ctx.fill();
+  // 黒髪・もみあげ
   ctx.fillStyle='#2a1800';
   ctx.beginPath(); ctx.arc(0,-25+bob,9,Math.PI,0); ctx.fill();
   ctx.beginPath(); ctx.arc(-10,-20+bob,5,Math.PI*0.8,Math.PI*1.8); ctx.fill();
   ctx.beginPath(); ctx.arc(10,-20+bob,5,Math.PI*1.2,Math.PI*0.2); ctx.fill();
   ctx.beginPath(); ctx.moveTo(2,-26+bob); ctx.quadraticCurveTo(12,-34+bob+Math.sin(animT*0.15)*4,8,-28+bob); ctx.quadraticCurveTo(5,-32+bob+Math.sin(animT*0.15)*4,2,-26+bob); ctx.fill();
+  // 眉
   ctx.save(); ctx.translate(-4.5,-18.75+bob); ctx.rotate(-0.2); ctx.fillStyle='#2a1800'; ctx.fillRect(-3.5,-1.25,7,2.5); ctx.restore();
   ctx.save(); ctx.translate(4.5,-18.75+bob); ctx.rotate(0.2); ctx.fillStyle='#2a1800'; ctx.fillRect(-3.5,-1.25,7,2.5); ctx.restore();
+  // 目
   ctx.fillStyle='#f0ead8'; ctx.beginPath(); ctx.ellipse(-4,-14+bob,4.5,5,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(4,-14+bob,4.5,5,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#1a0800'; ctx.beginPath(); ctx.arc(-4,-14+bob,3.2,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(4,-14+bob,3.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-3,-15.2+bob,1.1,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(-5.5,-13.5+bob,0.6,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5,-15.2+bob,1.1,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(2.5,-13.5+bob,0.6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-3,-15.2+bob,1.1,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5,-15.2+bob,1.1,0,Math.PI*2); ctx.fill();
+  // 鼻
   ctx.fillStyle='#c08060'; ctx.beginPath(); ctx.arc(0,-10+bob,3.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#a06040'; ctx.beginPath(); ctx.arc(-1.2,-10+bob,1.2,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(1.8,-10+bob,1.2,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='rgba(200,80,40,0.22)'; ctx.beginPath(); ctx.ellipse(-8,-11+bob,4.5,3,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(8,-11+bob,4.5,3,0,0,Math.PI*2); ctx.fill();
+  // 口
   ctx.strokeStyle='#8B4513'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-4,-6.5+bob); ctx.quadraticCurveTo(0,-4+bob,4,-6.5+bob); ctx.stroke();
   ctx.fillStyle='#f0ead8'; ctx.fillRect(-1.5,-7.5+bob,2,2.5);
+  // 耳
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(-13,-13+bob,3.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,3.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#c08060'; ctx.beginPath(); ctx.arc(-13,-13+bob,1.8,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,1.8,0,Math.PI*2); ctx.fill();
+  // 腕
   var armL=run*8, armR=-run*8;
   ctx.fillStyle='#556B2F'; ctx.beginPath(); ctx.arc(-13,4+bob+armL*0.3,5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,4+bob+armR*0.3,5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(-13,9+bob+armL*0.4,4,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,9+bob+armR*0.4,4,0,Math.PI*2); ctx.fill();
-  var legL=Math.abs(run)*6, legR=(1-Math.abs(run))*6;
-  ctx.fillStyle='#3d3d5c'; ctx.fillRect(-9,13+bob,7,9+legL*0.3); ctx.fillRect(2,13+bob,7,9+legR*0.3);
-  ctx.fillStyle='#2a1a00'; ctx.beginPath(); ctx.ellipse(-5.5,23+bob+legL*0.3,6.5,3.5,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(5.5,23+bob+legR*0.3,6.5,3.5,0,0,Math.PI*2); ctx.fill();
   if(isInv&&Math.floor(frame/3)%2===0){ ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14; ctx.beginPath(); ctx.arc(0,-2+bob,22,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur=0; }
   ctx.globalAlpha=1; ctx.restore();
 }
 
+// LV2: 古着屋（チェックシャツ・サスペンダー・茶髪ぼさぼさ・丸メガネ）
 function drawBoyFurugiya(x,y,sc,animT,isInv,isPhase){
   sc=sc||1; ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
   var bob=Math.sin(animT*0.18)*1.8, run=Math.sin(animT*0.22);
   ctx.globalAlpha=isPhase?0.65:1.0;
   var legL=Math.abs(run)*6, legR=(1-Math.abs(run))*6;
-  ctx.fillStyle='#7a6a50'; ctx.fillRect(-12,11+bob,10,12+legL*0.3); ctx.fillRect(2,11+bob,10,12+legR*0.3);
-  ctx.strokeStyle='rgba(100,80,40,0.55)'; ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.moveTo(-12,16+bob); ctx.lineTo(-2,16+bob); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-12,20+bob); ctx.lineTo(-2,20+bob); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-8,11+bob); ctx.lineTo(-8,23+bob+legL*0.3); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(2,16+bob); ctx.lineTo(12,16+bob); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(2,20+bob); ctx.lineTo(12,20+bob); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(6,11+bob); ctx.lineTo(6,23+bob+legR*0.3); ctx.stroke();
-  ctx.fillStyle='#e8e0d0'; ctx.beginPath(); ctx.ellipse(-6,24+bob+legL*0.3,7,3,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#c8c0b0'; ctx.beginPath(); ctx.ellipse(-6,23+bob+legL*0.3,7,2,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#e8e0d0'; ctx.beginPath(); ctx.ellipse(6,24+bob+legR*0.3,7,3,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#c8c0b0'; ctx.beginPath(); ctx.ellipse(6,23+bob+legR*0.3,7,2,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#8a9a70'; ctx.fillRect(-13,-3+bob,26,16);
-  ctx.fillStyle='rgba(50,60,30,0.5)'; ctx.font='bold 5px monospace'; ctx.textAlign='center';
-  ctx.fillText('VINTAGE',0,5+bob); ctx.textAlign='left';
-  ctx.fillStyle='#3a2a18'; ctx.fillRect(-13,10+bob,26,3);
-  ctx.fillStyle='#c8a860'; ctx.fillRect(-2,10+bob,4,3);
+  // ハイウエストコーデュロイパンツ（テラコッタオレンジ）
+  ctx.fillStyle='#c1622a'; ctx.fillRect(-10,10+bob,9,14+legL*0.3); ctx.fillRect(1,10+bob,9,14+legR*0.3);
+  // コーデュロイの縦筋
+  ctx.fillStyle='rgba(0,0,0,0.12)';
+  for(var cx2=-9;cx2<0;cx2+=3){ ctx.fillRect(cx2,10+bob,1,14+legL*0.3); }
+  for(var cx2=2;cx2<10;cx2+=3){ ctx.fillRect(cx2,10+bob,1,14+legR*0.3); }
+  // 靴（白スニーカー）
+  ctx.fillStyle='#e8e4d8'; ctx.beginPath(); ctx.ellipse(-5.5,25+bob+legL*0.3,7,3.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#c8441a'; ctx.fillRect(-10,23+bob+legL*0.3,9,2);
+  ctx.fillStyle='#e8e4d8'; ctx.beginPath(); ctx.ellipse(5.5,25+bob+legR*0.3,7,3.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#c8441a'; ctx.fillRect(1,23+bob+legR*0.3,9,2);
+  // チェックシャツ（緑×白）
+  ctx.fillStyle='#5a8a3a'; ctx.fillRect(-12,-3+bob,24,15);
+  // チェック柄（白の横縦線）
+  ctx.fillStyle='rgba(255,255,255,0.35)';
+  for(var chy=-3;chy<12;chy+=5){ ctx.fillRect(-12,chy+bob,24,1.5); }
+  for(var chx=-12;chx<12;chx+=5){ ctx.fillRect(chx,-3+bob,1.5,15); }
+  // シャツのボタン
+  ctx.fillStyle='#ffffff'; ctx.fillRect(-1.5,-3+bob,3,14);
+  ctx.fillStyle='rgba(0,0,0,0.3)'; [0,4,8].forEach(function(dy){ ctx.beginPath(); ctx.arc(0,dy-1+bob,1,0,Math.PI*2); ctx.fill(); });
+  // サスペンダー（赤）
+  ctx.fillStyle='#dd2222'; ctx.lineWidth=2.5; ctx.strokeStyle='#dd2222';
+  ctx.beginPath(); ctx.moveTo(-6,-3+bob); ctx.lineTo(-9,-16+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(6,-3+bob); ctx.lineTo(9,-16+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-6,10+bob); ctx.lineTo(-7,13+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(6,10+bob); ctx.lineTo(7,13+bob); ctx.stroke();
+  // 首
+  ctx.fillStyle='#D4A070'; ctx.fillRect(-4,-5+bob,8,4);
+  // 顔
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(0,-14+bob,13,0,Math.PI*2); ctx.fill();
+    // 黒髪ぼさぼさ
   ctx.fillStyle='#1a1200';
-  ctx.beginPath(); ctx.arc(0,-24+bob,11,Math.PI,0); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-13,-18+bob); ctx.quadraticCurveTo(-5,-28+bob,8,-22+bob); ctx.quadraticCurveTo(10,-15+bob,6,-14+bob); ctx.quadraticCurveTo(-2,-24+bob,-13,-18+bob); ctx.fill();
-  ctx.beginPath(); ctx.arc(-12,-17+bob,5,Math.PI*0.6,Math.PI*1.6); ctx.fill();
-  ctx.fillStyle='#1a1200';
-  ctx.save(); ctx.translate(-4,-19.5+bob); ctx.rotate(-0.12); ctx.fillRect(-3,-0.8,6,1.8); ctx.restore();
-  ctx.save(); ctx.translate(4,-19.5+bob); ctx.rotate(0.12); ctx.fillRect(-3,-0.8,6,1.8); ctx.restore();
-  ctx.fillStyle='#f0ead8'; ctx.beginPath(); ctx.ellipse(-4,-14+bob,4.5,5,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(4,-14+bob,4.5,5,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#1a0800'; ctx.beginPath(); ctx.arc(-4,-14+bob,3.2,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(4,-14+bob,3.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-3,-15.2+bob,1.1,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5,-15.2+bob,1.1,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,-25+bob,11,Math.PI,0); ctx.fill();
+  // ぼさぼさ感（不規則なモコモコ）
+  [[-11,-20],[-8,-28],[-3,-31],[3,-30],[8,-27],[12,-21]].forEach(function(p){
+    ctx.beginPath(); ctx.arc(p[0],p[1]+bob,5+Math.sin(p[0])*1.5,0,Math.PI*2); ctx.fill();
+  });
+  // 後ろ髪・サイド
+  ctx.fillStyle='#0e0a00';
+  ctx.beginPath(); ctx.arc(-12,-17+bob,6,Math.PI*0.3,Math.PI*1.7); ctx.fill();
+  ctx.beginPath(); ctx.arc(12,-17+bob,6,Math.PI*1.3,Math.PI*0.7); ctx.fill()
+  // 丸メガネ
+  ctx.strokeStyle='#8B6914'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.arc(-4.5,-14.5+bob,4.5,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(4.5,-14.5+bob,4.5,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-14.5+bob); ctx.lineTo(0,-14+bob); ctx.stroke(); // ブリッジ
+  ctx.beginPath(); ctx.moveTo(-9,-14.5+bob); ctx.lineTo(-13,-13+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(9,-14.5+bob); ctx.lineTo(13,-13+bob); ctx.stroke();
+  // 目（メガネ越し）
+  ctx.fillStyle='#f0ead8'; ctx.beginPath(); ctx.ellipse(-4.5,-14.5+bob,3.5,4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4.5,-14.5+bob,3.5,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#2a1400'; ctx.beginPath(); ctx.arc(-4.5,-14.5+bob,2.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(4.5,-14.5+bob,2.2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-3.5,-15.5+bob,0.8,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(5.5,-15.5+bob,0.8,0,Math.PI*2); ctx.fill();
+  // 眉（ぼさっと）
+  ctx.fillStyle='#1a1200'; ctx.lineWidth=2.2; ctx.strokeStyle='#1a1200';
+  // 鼻
   ctx.fillStyle='#c08060'; ctx.beginPath(); ctx.arc(0,-10+bob,3.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#a06040'; ctx.beginPath(); ctx.arc(-1.2,-10+bob,1.2,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(1.8,-10+bob,1.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(200,80,40,0.22)'; ctx.beginPath(); ctx.ellipse(-8,-11+bob,4.5,3,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(8,-11+bob,4.5,3,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#8B4513'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-4,-6.5+bob); ctx.quadraticCurveTo(0,-5+bob,4,-6.5+bob); ctx.stroke();
+  // 口（にっこり）
+  ctx.strokeStyle='#8B4513'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(-4,-6+bob); ctx.quadraticCurveTo(0,-3.5+bob,4,-6+bob); ctx.stroke();
+  // 耳
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(-13,-13+bob,3.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,3.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#c08060'; ctx.beginPath(); ctx.arc(-13,-13+bob,1.8,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,1.8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#c8a860'; ctx.beginPath(); ctx.arc(15,-11+bob,2,0,Math.PI*2); ctx.fill();
+  // 腕
   var armL2=run*8, armR2=-run*8;
-  ctx.fillStyle='#8a9a70'; ctx.beginPath(); ctx.arc(-14,3+bob+armL2*0.3,5.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(14,3+bob+armR2*0.3,5.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#5a8a3a'; ctx.beginPath(); ctx.arc(-14,3+bob+armL2*0.3,5.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(14,3+bob+armR2*0.3,5.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(-14,9+bob+armL2*0.4,4,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(14,9+bob+armR2*0.4,4,0,Math.PI*2); ctx.fill();
   if(isInv&&Math.floor(frame/3)%2===0){ ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14; ctx.beginPath(); ctx.arc(0,-2+bob,22,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur=0; }
   ctx.globalAlpha=1; ctx.restore();
 }
 
+// LV3: ジャズバー（黒タキシード・白シャツ・赤蝶ネクタイ・ポマード七三）
+function drawBoyJazz(x,y,sc,animT,isInv,isPhase){
+  sc=sc||1; ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
+  var bob=Math.sin(animT*0.18)*1.8, run=Math.sin(animT*0.22);
+  ctx.globalAlpha=isPhase?0.65:1.0;
+  var legL=Math.abs(run)*6, legR=(1-Math.abs(run))*6;
+  // スラックス（黒）
+  ctx.fillStyle='#111118'; ctx.fillRect(-10,11+bob,8,13+legL*0.3); ctx.fillRect(2,11+bob,8,13+legR*0.3);
+  ctx.fillStyle='#2a2a45'; ctx.fillRect(-10,11+bob,2,13+legL*0.3); ctx.fillRect(8,11+bob,2,13+legR*0.3);
+  // 黒革靴（光沢）
+  ctx.fillStyle='#0a0a10'; ctx.beginPath(); ctx.ellipse(-5.5,25+bob+legL*0.3,7.5,3.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#2a2a40'; ctx.beginPath(); ctx.ellipse(-4,23+bob+legL*0.3,5,2,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#0a0a10'; ctx.beginPath(); ctx.ellipse(5.5,25+bob+legR*0.3,7.5,3.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#2a2a40'; ctx.beginPath(); ctx.ellipse(4,23+bob+legR*0.3,5,2,0,0,Math.PI*2); ctx.fill();
+  // タキシードジャケット（黒）
+  ctx.fillStyle='#111122';
+  ctx.beginPath(); ctx.moveTo(-13,-3+bob); ctx.lineTo(13,-3+bob); ctx.lineTo(14,11+bob); ctx.lineTo(-14,11+bob); ctx.closePath(); ctx.fill();
+  // 白シャツ（中央）
+  ctx.fillStyle='#f0f0f8';
+  ctx.beginPath(); ctx.moveTo(-3.5,-3+bob); ctx.lineTo(3.5,-3+bob); ctx.lineTo(3.5,11+bob); ctx.lineTo(-3.5,11+bob); ctx.closePath(); ctx.fill();
+  // シャツのボタン
+  ctx.fillStyle='#ccccdd';
+  [0,4,8].forEach(function(dy){ ctx.beginPath(); ctx.arc(0,dy-1+bob,0.9,0,Math.PI*2); ctx.fill(); });
+  // ラペル（折り返し）
+  ctx.fillStyle='#1a1a30';
+  ctx.beginPath(); ctx.moveTo(-3.5,-3+bob); ctx.lineTo(-10,3+bob); ctx.lineTo(-10,7+bob); ctx.lineTo(-3.5,4+bob); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(3.5,-3+bob); ctx.lineTo(10,3+bob); ctx.lineTo(10,7+bob); ctx.lineTo(3.5,4+bob); ctx.closePath(); ctx.fill();
+  // 赤蝶ネクタイ
+  ctx.fillStyle='#cc0011';
+  ctx.beginPath(); ctx.moveTo(-4.5,-1+bob); ctx.lineTo(0,0.5+bob); ctx.lineTo(-4.5,2+bob); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(4.5,-1+bob); ctx.lineTo(0,0.5+bob); ctx.lineTo(4.5,2+bob); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#880008'; ctx.beginPath(); ctx.arc(0,0.5+bob,1.5,0,Math.PI*2); ctx.fill();
+  // 顔
+  ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(0,-14+bob,13,0,Math.PI*2); ctx.fill();
+  // ポマード七三（黒・ツヤあり）
+  ctx.fillStyle='#080608';
+  ctx.beginPath(); ctx.arc(0,-23+bob,11,Math.PI,0); ctx.fill();
+  // 七三（左多め）
+  ctx.beginPath(); ctx.moveTo(-13,-18+bob); ctx.bezierCurveTo(-12,-30+bob,2,-30+bob,4,-22+bob); ctx.bezierCurveTo(2,-18+bob,-6,-16+bob,-13,-18+bob); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(4,-22+bob); ctx.bezierCurveTo(10,-26+bob,14,-21+bob,13,-17+bob); ctx.bezierCurveTo(8,-13+bob,3,-12+bob,4,-22+bob); ctx.fill();
+  // つや（ポマード光沢）
+  ctx.fillStyle='rgba(80,60,120,0.22)';
+  ctx.beginPath(); ctx.ellipse(-3,-25+bob,5,2.5,0.4,0,Math.PI*2); ctx.fill();
+  // 眉（細め・キリッと）
+  ctx.fillStyle='#0a0808';
+  ctx.save(); ctx.translate(-4.5,-19.5+bob); ctx.rotate(-0.10); ctx.fillRect(-3.5,-0.8,7,1.8); ctx.restore();
+  ctx.save(); ctx.translate(4.5,-19.5+bob); ctx.rotate(0.10); ctx.fillRect(-3.5,-0.8,7,1.8); ctx.restore();
+  // 目（切れ長）
+  ctx.fillStyle='#f0e8e0'; ctx.beginPath(); ctx.ellipse(-4,-14+bob,4.5,4,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(4,-14+bob,4.5,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#0a0505'; ctx.beginPath(); ctx.ellipse(-4,-13.5+bob,3,2.5,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(4,-13.5+bob,3,2.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-3,-14.5+bob,1,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5,-14.5+bob,1,0,Math.PI*2); ctx.fill();
+  // 鼻
+  ctx.fillStyle='#b87848'; ctx.beginPath(); ctx.arc(0,-9+bob,3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#8a5530'; ctx.beginPath(); ctx.arc(-1.5,-9+bob,1.2,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(2,-9+bob,1.2,0,Math.PI*2); ctx.fill();
+  // 口（口角上がった）
+  ctx.strokeStyle='#6a3818'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(-4,-5.5+bob); ctx.quadraticCurveTo(0,-3+bob,4,-5.5+bob); ctx.stroke();
+  // 耳
+  ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(-13,-13+bob,3.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#c08060'; ctx.beginPath(); ctx.arc(-13,-13+bob,1.8,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,1.8,0,Math.PI*2); ctx.fill();
+  // 腕
+  var armL2=run*8, armR2=-run*8;
+  ctx.fillStyle='#111122'; ctx.beginPath(); ctx.arc(-14,3+bob+armL2*0.3,5.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(14,3+bob+armR2*0.3,5.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#f0f0f8'; ctx.beginPath(); ctx.arc(-14,8+bob+armL2*0.3,3.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(14,8+bob+armR2*0.3,3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(-14,9+bob+armL2*0.4,3,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(14,9+bob+armR2*0.4,3,0,Math.PI*2); ctx.fill();
+  if(isInv&&Math.floor(frame/3)%2===0){ ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.shadowColor='#FFD700'; ctx.shadowBlur=14; ctx.beginPath(); ctx.arc(0,-2+bob,22,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur=0; }
+  ctx.globalAlpha=1; ctx.restore();
+}
+
+// LV4: ヤクザ（そのまま）
 function drawBoyYakuza(x,y,sc,animT,isInv,isPhase){
   sc=sc||1; ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
   var bob=Math.sin(animT*0.18)*1.8, run=Math.sin(animT*0.22);
@@ -548,6 +646,7 @@ function drawBoyYakuza(x,y,sc,animT,isInv,isPhase){
   ctx.globalAlpha=1; ctx.restore();
 }
 
+// LV5: アフロFUNK（そのまま）
 function drawBoyFunk(x,y,sc,animT,isInv,isPhase){
   sc=sc||1; ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
   var bob=Math.sin(animT*0.18)*1.8, run=Math.sin(animT*0.22);
@@ -601,9 +700,10 @@ function drawBoyFunk(x,y,sc,animT,isInv,isPhase){
 }
 
 function drawBoy(x,y,sc,animT,isInv,isPhase){
-  if(lvl<=1) drawBoyKimokawa(x,y,sc,animT,isInv,isPhase);
+  if(lvl<=1)      drawBoyKimokawa(x,y,sc,animT,isInv,isPhase);
   else if(lvl===2) drawBoyFurugiya(x,y,sc,animT,isInv,isPhase);
-  else if(lvl===3) drawBoyYakuza(x,y,sc,animT,isInv,isPhase);
+  else if(lvl===3) drawBoyJazz(x,y,sc,animT,isInv,isPhase);
+  else if(lvl===4) drawBoyYakuza(x,y,sc,animT,isInv,isPhase);
   else             drawBoyFunk(x,y,sc,animT,isInv,isPhase);
 }
 
@@ -611,6 +711,7 @@ function drawHeartSmall(cx,cy,size,c){
   c.save(); c.translate(cx,cy); c.scale(size*0.12,size*0.12);
   c.beginPath(); c.moveTo(0,5); c.bezierCurveTo(-5,-2,-8,1,-8,3); c.bezierCurveTo(-8,7,-4,10,0,14); c.bezierCurveTo(4,10,8,7,8,3); c.bezierCurveTo(8,1,5,-2,0,5); c.closePath(); c.fill(); c.restore();
 }
+
 function drawEnemy(e){
   ctx.save(); ctx.translate(e.x,e.y);
   if(e.dir<0) ctx.scale(-1,1);
@@ -648,23 +749,24 @@ function drawEnemy(e){
 }
 
 function getSkyRatio() {
-  var ratios = [0.40, 0.54, 0.68, 0.82, 1.00];
-  return ratios[Math.min(lvl, 4)];
+  var ratios = [0, 0.40, 0.54, 0.68, 0.82, 1.00];
+  return ratios[Math.min(lvl, 5)];
 }
 
 var SKY_COLORS = [
+  null,
   ['#3a1c00', '#1a0800'],
-  ['#2a1000', '#0d0600'],
+  ['#1a3300', '#0d1a00'],
   ['#000820', '#000010'],
   ['#180000', '#0a0000'],
   ['#08000f', '#000005'],
 ];
 
 function drawScrollingBackground() {
-  var th = THEMES[lvl] || THEMES[0];
+  var th = THEMES[lvl] || THEMES[1];
   var skyRatio = getSkyRatio();
   var skyH = H * skyRatio;
-  var sc = SKY_COLORS[lvl] || SKY_COLORS[0];
+  var sc = SKY_COLORS[lvl] || SKY_COLORS[1];
 
   var skyGr = ctx.createLinearGradient(0, 0, 0, skyH);
   skyGr.addColorStop(0, sc[0]);
@@ -672,7 +774,7 @@ function drawScrollingBackground() {
   ctx.fillStyle = skyGr;
   ctx.fillRect(0, 0, W, skyH);
 
-  if (lvl >= 2) {
+  if (lvl >= 3) {
     var moonY = skyH * 0.25;
     var moonX = W * 0.8;
     var mf = 0.8 + 0.2 * Math.sin(frame * 0.05);
@@ -684,8 +786,8 @@ function drawScrollingBackground() {
     ctx.beginPath(); ctx.arc(moonX + 8, moonY - 4, 13, 0, Math.PI * 2); ctx.fill();
   }
 
-  if (lvl >= 3) {
-    var starAlpha = (lvl - 3) * 0.5 + 0.4;
+  if (lvl >= 4) {
+    var starAlpha = (lvl - 4) * 0.5 + 0.4;
     STARS.forEach(function(s) {
       var tw = 0.5 + 0.5 * Math.sin(s.twinkle + frame * 0.04);
       ctx.globalAlpha = tw * starAlpha * skyRatio;
@@ -695,37 +797,27 @@ function drawScrollingBackground() {
     ctx.globalAlpha = 1;
   }
 
-  // 流れ星：右上から左下へ
-  if (lvl >= 4) {
+  if (lvl >= 5) {
     var skyAreaH = H * skyRatio;
     SHOOTING_STARS.forEach(function(ss, si) {
       var cycle = 180 + si * 40;
       var localF = (frame + ss.startFrame) % cycle;
       if (localF >= 50) return;
       var progress = localF / 50;
-      var startX = ss.x + 80;
-      var startY = skyAreaH * 0.05;
-      var endX   = ss.x - 80;
-      var endY   = skyAreaH * 0.45;
+      var startX = ss.x + 80, startY = skyAreaH * 0.05;
+      var endX = ss.x - 80, endY = skyAreaH * 0.45;
       var sx = startX + progress * (endX - startX);
       var sy = startY + progress * (endY - startY);
       var tailLen = 10;
       var dx = endX - startX, dy = endY - startY;
       var dist = Math.sqrt(dx*dx + dy*dy);
-      var tailX = sx - (dx / dist) * tailLen;
-      var tailY = sy - (dy / dist) * tailLen;
+      var tailX = sx - (dx / dist) * tailLen, tailY = sy - (dy / dist) * tailLen;
       var alpha = progress < 0.7 ? 1 : (1 - progress) / 0.3;
       ctx.globalAlpha = alpha;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.shadowColor = '#aaddff';
-      ctx.shadowBlur = 5;
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(tailX, tailY);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+      ctx.shadowColor = '#aaddff'; ctx.shadowBlur = 5;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(tailX, tailY); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     });
   }
 
@@ -739,31 +831,26 @@ function drawScrollingBackground() {
   ctx.fillRect(0, bldTop, W, H - bldTop);
 
   var farScrollY = bgScrollY * 0.5;
-  BG_BUILDINGS.slice(0, 9).forEach(function(b, bi) {
-    var bh = b.h;
-    var baseShift = farScrollY % (bh + 40);
+  BG_BUILDINGS.slice(0, 9).forEach(function(b) {
+    var bh = b.h, baseShift = farScrollY % (bh + 40);
     for (var rep = -1; rep <= 1; rep++) {
       var by = H - bh + baseShift + rep * (bh + 40);
       if (by > H || by + bh < bldTop) continue;
-      var drawTop = Math.max(by, bldTop);
-      var drawH = Math.min(by + bh, H) - drawTop;
+      var drawTop = Math.max(by, bldTop), drawH = Math.min(by + bh, H) - drawTop;
       if (drawH <= 0) continue;
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = '#080500';
+      ctx.globalAlpha = 0.35; ctx.fillStyle = '#080500';
       ctx.fillRect(b.x, drawTop, b.w, drawH);
-      var winStep = 10, winW = 3, winH2 = 4;
       b.winCols.forEach(function(col, ci) {
         var wx = b.x + 2 + ci * 7;
-        if (wx + winW > b.x + b.w - 2) return;
+        if (wx + 3 > b.x + b.w - 2) return;
         col.forEach(function(win, ri) {
           if (!win.exists) return;
-          var wy = by + 8 + ri * winStep;
+          var wy = by + 8 + ri * 10;
           if (wy < bldTop || wy > H - 2) return;
           if (isWindowLit(win.flickSeed, frame)) {
-            var col2 = WIN_COLORS_FAR[win.colorIdx % WIN_COLORS_FAR.length];
             ctx.globalAlpha = 0.32;
-            ctx.fillStyle = col2 + '1)';
-            ctx.fillRect(wx, wy, winW, winH2);
+            ctx.fillStyle = WIN_COLORS_FAR[win.colorIdx % WIN_COLORS_FAR.length] + '1)';
+            ctx.fillRect(wx, wy, 3, 4);
           }
         });
       });
@@ -772,38 +859,31 @@ function drawScrollingBackground() {
   });
 
   var midScrollY = bgScrollY * 0.8;
-  BG_BUILDINGS.slice(9).forEach(function(b, bi) {
-    var bh = b.h;
-    var baseShift = midScrollY % (bh + 60);
+  BG_BUILDINGS.slice(9).forEach(function(b) {
+    var bh = b.h, baseShift = midScrollY % (bh + 60);
     for (var rep = -1; rep <= 1; rep++) {
       var by = H - bh + baseShift + rep * (bh + 60);
       if (by > H || by + bh < bldTop) continue;
-      var drawTop = Math.max(by, bldTop);
-      var drawH = Math.min(by + bh, H) - drawTop;
+      var drawTop = Math.max(by, bldTop), drawH = Math.min(by + bh, H) - drawTop;
       if (drawH <= 0) continue;
-      ctx.globalAlpha = 0.70;
-      ctx.fillStyle = '#030200';
+      ctx.globalAlpha = 0.70; ctx.fillStyle = '#030200';
       ctx.fillRect(b.x, drawTop, b.w, drawH);
       if (drawTop === Math.max(by, bldTop) && by >= bldTop) {
-        ctx.fillStyle = th.wallH + '55';
-        ctx.fillRect(b.x, by, b.w, 2);
+        ctx.fillStyle = th.wallH + '55'; ctx.fillRect(b.x, by, b.w, 2);
       }
-      var winStep = 11, winW = 4, winH2 = 5;
       b.winCols.forEach(function(col, ci) {
         var wx = b.x + 3 + ci * 8;
-        if (wx + winW > b.x + b.w - 2) return;
+        if (wx + 4 > b.x + b.w - 2) return;
         col.forEach(function(win, ri) {
           if (!win.exists) return;
-          var wy = by + 10 + ri * winStep;
+          var wy = by + 10 + ri * 11;
           if (wy < bldTop || wy > H - 2) return;
           if (isWindowLit(win.flickSeed, frame)) {
-            var colPalette = WIN_COLORS_MID[win.colorIdx % WIN_COLORS_MID.length];
             ctx.globalAlpha = 0.75;
-            ctx.fillStyle = colPalette + '1)';
-            ctx.fillRect(wx, wy, winW, winH2);
+            ctx.fillStyle = WIN_COLORS_MID[win.colorIdx % WIN_COLORS_MID.length] + '1)';
+            ctx.fillRect(wx, wy, 4, 5);
             ctx.globalAlpha = 0.18;
-            ctx.fillStyle = colPalette + '1)';
-            ctx.fillRect(wx - 1, wy - 1, winW + 2, winH2 + 2);
+            ctx.fillRect(wx - 1, wy - 1, 6, 7);
           }
         });
       });
@@ -811,8 +891,7 @@ function drawScrollingBackground() {
     }
   });
 
-  var poleScrollY = bgScrollY * 1.0;
-  var poleTotalH = 280;
+  var poleScrollY = bgScrollY * 1.0, poleTotalH = 280;
   ctx.globalAlpha = 0.80;
   BG_POLES.forEach(function(p, pi) {
     var offset = pi * (poleTotalH / BG_POLES.length);
@@ -826,8 +905,7 @@ function drawScrollingBackground() {
       ctx.fillRect(p.x - 3, drawPoleTop, 5, Math.min(poleBotY, H) - drawPoleTop);
       var armY = poleTopY - 150;
       if (armY >= bldTop && armY < H) {
-        ctx.fillStyle = 'rgba(10,5,0,0.88)';
-        ctx.fillRect(p.x - 20, armY, 40, 4);
+        ctx.fillStyle = 'rgba(10,5,0,0.88)'; ctx.fillRect(p.x - 20, armY, 40, 4);
         ctx.fillStyle = 'rgba(70,55,20,0.75)';
         ctx.beginPath(); ctx.arc(p.x - 14, armY + 2, 3, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(p.x + 14, armY + 2, 3, 0, Math.PI * 2); ctx.fill();
@@ -836,10 +914,7 @@ function drawScrollingBackground() {
       if (wireY >= bldTop && wireY < H) {
         var nextPole = BG_POLES[(pi + 1) % BG_POLES.length];
         ctx.strokeStyle = 'rgba(15,8,0,0.70)'; ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(p.x, wireY);
-        ctx.quadraticCurveTo((p.x + nextPole.x) / 2, wireY + 18, nextPole.x, wireY);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p.x, wireY); ctx.quadraticCurveTo((p.x + nextPole.x) / 2, wireY + 18, nextPole.x, wireY); ctx.stroke();
       }
     }
   });
@@ -913,7 +988,7 @@ function drawHUD(th){
   ctx.fillStyle=th.accent; ctx.shadowColor=th.accent; ctx.shadowBlur=8; ctx.font='bold 12px monospace'; ctx.textAlign='right';
   ctx.fillText(Math.floor(score)+'m',W-6,20); ctx.shadowBlur=0;
   ctx.fillStyle='rgba(255,255,200,0.45)'; ctx.font='7px monospace'; ctx.fillText('BEST '+Math.floor(best)+'m',W-6,31);
-  var lvc=[th.accent,'#CD853F','#FFD700','#FF4444','#FF00FF'][lvl];
+  var lvc=[null,th.accent,'#aadd44','#FFD700','#FF4444','#FF00FF'][lvl]||th.accent;
   ctx.fillStyle=lvc; ctx.shadowColor=lvc; ctx.shadowBlur=4; ctx.font='bold 8px monospace'; ctx.fillText('LV'+lvl+' '+THEMES[lvl].name,W-6,42); ctx.shadowBlur=0; ctx.textAlign='left';
   var px=6,py=H-8; ctx.font='8px monospace';
   if(invF>0){ctx.fillStyle='#FFD700';ctx.shadowColor='#FFD700';ctx.shadowBlur=4;ctx.fillText('★INV:'+Math.ceil(invF/60)+'s',px,py);px+=64;ctx.shadowBlur=0;}
@@ -933,7 +1008,7 @@ function drawTitle(){
   titleFrame++;
   var gr=ctx.createLinearGradient(0,0,0,H); gr.addColorStop(0,'#080400'); gr.addColorStop(0.6,'#120900'); gr.addColorStop(1,'#1a0d00');
   ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
-  var savedLvl=lvl; lvl=0;
+  var savedLvl=lvl; lvl=1;
   var savedBgScroll=bgScrollY; bgScrollY=titleFrame*0.5;
   drawScrollingBackground();
   lvl=savedLvl; bgScrollY=savedBgScroll;
@@ -944,7 +1019,9 @@ function drawTitle(){
   ctx.fillStyle='rgba(255,80,0,'+fl+')'; ctx.shadowColor='#FF5000'; ctx.shadowBlur=28*fl; ctx.font='bold 46px monospace'; ctx.fillText('ボーイ',W/2,H*0.31); ctx.shadowBlur=0;
   ctx.fillStyle='rgba(200,160,80,0.7)'; ctx.font='8px monospace'; ctx.fillText('- KOENJI RETRO ACTION -',W/2,H*0.37);
   var bounce=Math.sin(titleFrame*0.07)*5;
+  var savedLvl2=lvl; lvl=1;
   drawBoy(W/2,H*0.52+bounce,1.6,titleFrame,false,false);
+  lvl=savedLvl2;
   var infos=[
     {t:'HOLD: 上昇  RELEASE: 落下',c:'rgba(244,164,96,0.9)'},
     {t:'敵を上から踏んで倒せ！',c:'rgba(200,130,60,0.85)'},
@@ -955,25 +1032,27 @@ function drawTitle(){
   infos.forEach(function(inf){ ctx.fillStyle=inf.c; ctx.shadowColor=inf.c; ctx.shadowBlur=4; ctx.fillText(inf.t,W/2,iy); iy+=17; });
   ctx.shadowBlur=0;
   if(best>0){ctx.fillStyle='rgba(150,120,60,0.7)';ctx.font='8px monospace';ctx.fillText('BEST: '+Math.floor(best)+'m',W/2,iy+2);iy+=16;}
-  if(Math.floor(titleFrame/22)%2===0){ ctx.fillStyle=THEMES[0].accent; ctx.shadowColor=THEMES[0].accent; ctx.shadowBlur=10; ctx.font='bold 13px monospace'; ctx.fillText('[ PUSH START ]',W/2,iy+10); ctx.shadowBlur=0; }
+  if(Math.floor(titleFrame/22)%2===0){ ctx.fillStyle=THEMES[1].accent; ctx.shadowColor=THEMES[1].accent; ctx.shadowBlur=10; ctx.font='bold 13px monospace'; ctx.fillText('[ PUSH START ]',W/2,iy+10); ctx.shadowBlur=0; }
   ctx.textAlign='left';
-  drawCRT(THEMES[0]);
+  drawCRT(THEMES[1]);
 }
+
 function drawGameOver(){
   ctx.fillStyle='rgba(0,0,0,0.82)'; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center';
   ctx.fillStyle='#FF4444'; ctx.shadowColor='#FF4444'; ctx.shadowBlur=24; ctx.font='bold 28px monospace'; ctx.fillText('GAME OVER',W/2,H/2-60); ctx.shadowBlur=0;
-  ctx.fillStyle=THEMES[0].accent; ctx.shadowColor=THEMES[0].accent; ctx.shadowBlur=12; ctx.font='bold 16px monospace'; ctx.fillText(Math.floor(score)+'m 登った！',W/2,H/2-18); ctx.shadowBlur=0;
+  var th=THEMES[lvl]||THEMES[1];
+  ctx.fillStyle=th.accent; ctx.shadowColor=th.accent; ctx.shadowBlur=12; ctx.font='bold 16px monospace'; ctx.fillText(Math.floor(score)+'m 登った！',W/2,H/2-18); ctx.shadowBlur=0;
   ctx.fillStyle='rgba(200,160,80,0.6)'; ctx.font='9px monospace'; ctx.fillText('BEST: '+Math.floor(best)+'m',W/2,H/2+6);
-  var lvc=[THEMES[0].accent,'#CD853F','#FFD700','#FF4444','#FF00FF'][lvl];
+  var lvc=[null,THEMES[1].accent,'#aadd44','#FFD700','#FF4444','#FF00FF'][lvl]||THEMES[1].accent;
   ctx.fillStyle=lvc; ctx.font='8px monospace'; ctx.fillText('MAX LV'+lvl+' '+THEMES[lvl].name,W/2,H/2+26);
-  if(Math.floor(frame/22)%2===0){ ctx.fillStyle=THEMES[0].accent; ctx.shadowColor=THEMES[0].accent; ctx.shadowBlur=8; ctx.font='bold 12px monospace'; ctx.fillText('[ PUSH START ]',W/2,H/2+66); ctx.shadowBlur=0; }
+  if(Math.floor(frame/22)%2===0){ ctx.fillStyle=th.accent; ctx.shadowColor=th.accent; ctx.shadowBlur=8; ctx.font='bold 12px monospace'; ctx.fillText('[ PUSH START ]',W/2,H/2+66); ctx.shadowBlur=0; }
   ctx.textAlign='left';
 }
 
 function draw(){
   ctx.clearRect(0,0,W,H);
-  var th=THEMES[lvl]||THEMES[0];
+  var th=THEMES[lvl]||THEMES[1];
   if(STATE==='title'){ drawTitle(); return; }
   ctx.save(); ctx.translate(shakeX,shakeY);
   drawScrollingBackground();

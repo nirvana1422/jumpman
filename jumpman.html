@@ -316,7 +316,7 @@ var ctx=canvas.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 var W=canvas.width, H=canvas.height, GND=H-60;
 var state='title', score=0, lives=3, hiScore=0, frame=0, lastLevel=0;
-var GROUND_SPEED=5.5, AIR_SPEED=1.7;
+var GROUND_SPEED=5.5, AIR_SPEED=2.0;
 var hitstopFrames=0, damageFlash=0, titleBlink=0;
 
 var partGetAnim = null;
@@ -762,7 +762,7 @@ function doJump(){
     var n=P.currentMaxJumps-P.jumpsLeft;
     if(n===0) seJump(); else if(n===1) seJump2(); else seJump3();
     P.vy=(n===0)?-16:(n===1?-14:-13); P.jumpsLeft--; P.onGround=false;
-    P.vx=(P.speedTimer>0?AIR_SPEED*1.4:AIR_SPEED)*P.dir;
+    P.vx=(P.speedTimer>0?AIR_SPEED*1.2:AIR_SPEED)*P.dir;
     afterImages.push({x:P.x,y:P.y,dir:P.dir,life:12,maxLife:12});
   }
 }
@@ -799,7 +799,7 @@ function update(){
     BGM.startLevel(lv);
     checkPartsGet(lv);
   }
-  if(P.onGround) P.vx=(P.speedTimer>0?GROUND_SPEED*1.4:GROUND_SPEED)*P.dir;
+  if(P.onGround) P.vx=(P.speedTimer>0?GROUND_SPEED*1.2:GROUND_SPEED)*P.dir;
   P.x+=P.vx;
   if(P.x>W-P.w/2){ P.x=W-P.w/2; P.dir=-1; P.vx=-Math.abs(P.vx); }
   if(P.x<P.w/2){ P.x=P.w/2; P.dir=1; P.vx=Math.abs(P.vx); }

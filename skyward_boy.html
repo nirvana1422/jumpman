@@ -453,7 +453,8 @@ function drawBoyKimokawa(x,y,sc,animT,isInv,isPhase){
   ctx.globalAlpha=1; ctx.restore();
 }
 
-// LV2: 古着屋（チェックシャツ・サスペンダー・茶髪ぼさぼさ・丸メガネ）
+// LV2: 古着屋（チェックシャツ・サスペンダー・黒髪ぼさぼさ・丸メガネ）
+// 顔・髪はLV1に近づけた（黒髪、同じ肌色・目・鼻・口）
 function drawBoyFurugiya(x,y,sc,animT,isInv,isPhase){
   sc=sc||1; ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
   var bob=Math.sin(animT*0.18)*1.8, run=Math.sin(animT*0.22);
@@ -487,42 +488,44 @@ function drawBoyFurugiya(x,y,sc,animT,isInv,isPhase){
   ctx.beginPath(); ctx.moveTo(6,10+bob); ctx.lineTo(7,13+bob); ctx.stroke();
   // 首
   ctx.fillStyle='#D4A070'; ctx.fillRect(-4,-5+bob,8,4);
-  // 顔
+  // 顔（LV1と同じ肌色）
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(0,-14+bob,13,0,Math.PI*2); ctx.fill();
-    // 黒髪ぼさぼさ
-  ctx.fillStyle='#1a1200';
-  ctx.beginPath(); ctx.arc(0,-25+bob,11,Math.PI,0); ctx.fill();
-  // ぼさぼさ感（不規則なモコモコ）
-  [[-11,-20],[-8,-28],[-3,-31],[3,-30],[8,-27],[12,-21]].forEach(function(p){
-    ctx.beginPath(); ctx.arc(p[0],p[1]+bob,5+Math.sin(p[0])*1.5,0,Math.PI*2); ctx.fill();
-  });
-  // 後ろ髪・サイド
-  ctx.fillStyle='#0e0a00';
-  ctx.beginPath(); ctx.arc(-12,-17+bob,6,Math.PI*0.3,Math.PI*1.7); ctx.fill();
-  ctx.beginPath(); ctx.arc(12,-17+bob,6,Math.PI*1.3,Math.PI*0.7); ctx.fill()
-  // 丸メガネ
+  // 黒髪ぼさぼさ（LV1と同じ黒 #2a1800、ぼさぼさ感のみ残す）
+  ctx.fillStyle='#2a1800';
+  ctx.beginPath(); ctx.arc(0,-25+bob,9,Math.PI,0); ctx.fill();
+  ctx.beginPath(); ctx.arc(-10,-20+bob,5,Math.PI*0.8,Math.PI*1.8); ctx.fill();
+  ctx.beginPath(); ctx.arc(10,-20+bob,5,Math.PI*1.2,Math.PI*0.2); ctx.fill();
+  // ぼさぼさ感（LV1ベースに少し膨らみを追加）
+  ctx.beginPath(); ctx.arc(-6,-27+bob,5,Math.PI,0); ctx.fill();
+  ctx.beginPath(); ctx.arc(5,-27+bob,5,Math.PI,0); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(2,-26+bob); ctx.quadraticCurveTo(10,-33+bob+Math.sin(animT*0.15)*3,7,-27+bob); ctx.quadraticCurveTo(5,-31+bob+Math.sin(animT*0.15)*3,2,-26+bob); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-2,-26+bob); ctx.quadraticCurveTo(-10,-33+bob+Math.sin(animT*0.13)*3,-7,-27+bob); ctx.quadraticCurveTo(-5,-31+bob+Math.sin(animT*0.13)*3,-2,-26+bob); ctx.fill();
+  // 眉（LV1と同じ）
+  ctx.save(); ctx.translate(-4.5,-18.75+bob); ctx.rotate(-0.2); ctx.fillStyle='#2a1800'; ctx.fillRect(-3.5,-1.25,7,2.5); ctx.restore();
+  ctx.save(); ctx.translate(4.5,-18.75+bob); ctx.rotate(0.2); ctx.fillStyle='#2a1800'; ctx.fillRect(-3.5,-1.25,7,2.5); ctx.restore();
+  // 丸メガネ（LV2の特徴として残す）
   ctx.strokeStyle='#8B6914'; ctx.lineWidth=1.8;
-  ctx.beginPath(); ctx.arc(-4.5,-14.5+bob,4.5,0,Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(4.5,-14.5+bob,4.5,0,Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,-14.5+bob); ctx.lineTo(0,-14+bob); ctx.stroke(); // ブリッジ
-  ctx.beginPath(); ctx.moveTo(-9,-14.5+bob); ctx.lineTo(-13,-13+bob); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(9,-14.5+bob); ctx.lineTo(13,-13+bob); ctx.stroke();
-  // 目（メガネ越し）
-  ctx.fillStyle='#f0ead8'; ctx.beginPath(); ctx.ellipse(-4.5,-14.5+bob,3.5,4,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(4.5,-14.5+bob,3.5,4,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#2a1400'; ctx.beginPath(); ctx.arc(-4.5,-14.5+bob,2.2,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(4.5,-14.5+bob,2.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-3.5,-15.5+bob,0.8,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(5.5,-15.5+bob,0.8,0,Math.PI*2); ctx.fill();
-  // 眉（ぼさっと）
-  ctx.fillStyle='#1a1200'; ctx.lineWidth=2.2; ctx.strokeStyle='#1a1200';
-  // 鼻
+  ctx.beginPath(); ctx.arc(-4,-14+bob,4.5,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(4,-14+bob,4.5,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-0.5,-14+bob); ctx.lineTo(0.5,-14+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-8.5,-14+bob); ctx.lineTo(-13,-13+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8.5,-14+bob); ctx.lineTo(13,-13+bob); ctx.stroke();
+  // 目（LV1と同じ値、メガネの内側）
+  ctx.fillStyle='#f0ead8'; ctx.beginPath(); ctx.ellipse(-4,-14+bob,3.5,4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4,-14+bob,3.5,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1a0800'; ctx.beginPath(); ctx.arc(-4,-14+bob,2.4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(4,-14+bob,2.4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-3,-15.2+bob,1.0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(5,-15.2+bob,1.0,0,Math.PI*2); ctx.fill();
+  // 鼻（LV1と同じ）
   ctx.fillStyle='#c08060'; ctx.beginPath(); ctx.arc(0,-10+bob,3.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#a06040'; ctx.beginPath(); ctx.arc(-1.2,-10+bob,1.2,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(1.8,-10+bob,1.2,0,Math.PI*2); ctx.fill();
-  // 口（にっこり）
+  ctx.fillStyle='rgba(200,80,40,0.22)'; ctx.beginPath(); ctx.ellipse(-8,-11+bob,4.5,3,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(8,-11+bob,4.5,3,0,0,Math.PI*2); ctx.fill();
+  // 口（LV1と同じ）
   ctx.strokeStyle='#8B4513'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(-4,-6+bob); ctx.quadraticCurveTo(0,-3.5+bob,4,-6+bob); ctx.stroke();
-  // 耳
+  ctx.beginPath(); ctx.moveTo(-4,-6.5+bob); ctx.quadraticCurveTo(0,-4+bob,4,-6.5+bob); ctx.stroke();
+  ctx.fillStyle='#f0ead8'; ctx.fillRect(-1.5,-7.5+bob,2,2.5);
+  // 耳（LV1と同じ）
   ctx.fillStyle='#D4A070'; ctx.beginPath(); ctx.arc(-13,-13+bob,3.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,3.5,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#c08060'; ctx.beginPath(); ctx.arc(-13,-13+bob,1.8,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-13+bob,1.8,0,Math.PI*2); ctx.fill();
   // 腕

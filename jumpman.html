@@ -799,7 +799,7 @@ function update(){
     BGM.startLevel(lv);
     checkPartsGet(lv);
   }
-  if(P.onGround) P.vx=(P.speedTimer>0?GROUND_SPEED*1.2:GROUND_SPEED)*P.dir;
+  if(P.onGround) P.vx=(P.speedTimer>0?GROUND_SPEED*1.3:GROUND_SPEED)*P.dir;
   P.x+=P.vx;
   if(P.x>W-P.w/2){ P.x=W-P.w/2; P.dir=-1; P.vx=-Math.abs(P.vx); }
   if(P.x<P.w/2){ P.x=P.w/2; P.dir=1; P.vx=Math.abs(P.vx); }
